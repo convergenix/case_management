@@ -1,0 +1,34 @@
+{
+ "add_total_row": 1,
+ "creation": "2020-07-07 21:08:00.647534",
+ "disable_prepared_report": 0,
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": "Default",
+ "modified": "2020-07-07 21:08:31.650055",
+ "modified_by": "Administrator",
+ "module": "Case Management",
+ "name": "Matter Expense Summary",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Matter",
+ "report_name": "Matter Expense Summary",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Administrator"
+  },
+  {
+   "role": "Lawyer Manager"
+  },
+  {
+   "role": "Practice Manager"
+  },
+  {
+   "role": "System Manager"
+  }
+ ]
+}

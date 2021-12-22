@@ -1,0 +1,79 @@
+{
+ "autoname": "field:structure_name",
+ "creation": "2017-08-10 05:28:15.329451",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {
+   "fieldname": "structure_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Structure Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "0",
+   "description": "Allow folder stucture available to everyone.",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "default": "0",
+   "description": "Set default folder structure ",
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Is Default"
+  },
+  {
+   "description": "List all the folders in folder structure",
+   "fieldname": "folders",
+   "fieldtype": "Table",
+   "label": "Folders",
+   "options": "Folder Structure Item"
+  },
+  {
+   "default": "Client",
+   "fieldname": "apply_on",
+   "fieldtype": "Select",
+   "label": "Apply on",
+   "options": "Matter\nClient"
+  }
+ ],
+ "modified": "2019-11-29 23:47:07.196824",
+ "modified_by": "Administrator",
+ "module": "Misc",
+ "name": "Folder Structure",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Document Manager User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

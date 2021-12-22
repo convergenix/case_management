@@ -1,0 +1,24 @@
+{
+ "add_total_row": 0,
+ "creation": "2019-09-22 14:12:07.643064",
+ "disable_prepared_report": 1,
+ "disabled": 1,
+ "docstatus": 0,
+ "doctype": "Report",
+ "idx": 0,
+ "is_standard": "Yes",
+ "modified": "2020-07-07 13:43:51.857863",
+ "modified_by": "Administrator",
+ "module": "Case Management",
+ "name": "Matter Summary Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Matter",
+ "report_name": "Matter Summary Report",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Lawyer Manager"
+  }
+ ]
+}

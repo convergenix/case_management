@@ -1,0 +1,275 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "naming_series:",
+ "creation": "2016-10-30 12:11:54.893977",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sb1",
+  "original_matter_id",
+  "status",
+  "naming_series",
+  "client",
+  "ref_no",
+  "column_break_5",
+  "open_date",
+  "close_date",
+  "practice_area",
+  "transaction",
+  "responsible_solicitor",
+  "solicitor_name",
+  "team",
+  "legal_team",
+  "matter_information",
+  "sb2",
+  "custom_field",
+  "get_custom_field",
+  "check_list",
+  "sb4",
+  "activities",
+  "expense_section",
+  "expense",
+  "sb5",
+  "invoice",
+  "section_break_26",
+  "amended_from",
+  "cost_center",
+  "company"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb1",
+   "fieldtype": "Section Break",
+   "label": "Matter Detail"
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "original_matter_id",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Original Matter Id"
+  },
+  {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nPending\nClosed"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "OA-MTT-\nOA-MAT-"
+  },
+  {
+   "fieldname": "client",
+   "fieldtype": "Link",
+   "label": "Client",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "ref_no",
+   "fieldtype": "Data",
+   "label": "Client Reference Number"
+  },
+  {
+   "fieldname": "column_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "open_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Open Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "close_date",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Close Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "practice_area",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Practice Area",
+   "options": "Practice Area",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "depends_on": "practice_area",
+   "fieldname": "transaction",
+   "fieldtype": "Data",
+   "label": "Transaction",
+   "reqd": 1
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Section Break",
+   "label": "Legal Team"
+  },
+  {
+   "fieldname": "legal_team",
+   "fieldtype": "Table",
+   "label": "Team ",
+   "options": "Matter Team Item"
+  },
+  {
+   "fieldname": "matter_information",
+   "fieldtype": "Text",
+   "label": "Matter Information"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sb2",
+   "fieldtype": "Section Break",
+   "label": "Check List"
+  },
+  {
+   "fieldname": "custom_field",
+   "fieldtype": "Link",
+   "label": "Templates",
+   "options": "Matter Custom Check List"
+  },
+  {
+   "fieldname": "get_custom_field",
+   "fieldtype": "Button",
+   "label": "Use Checklist Template",
+   "options": "get_custom_field"
+  },
+  {
+   "fieldname": "check_list",
+   "fieldtype": "Table",
+   "label": "Check List",
+   "options": "Matter Check List Item"
+  },
+  {
+   "fieldname": "sb4",
+   "fieldtype": "Section Break",
+   "label": "Matter Activity / Time Sheet"
+  },
+  {
+   "fieldname": "activities",
+   "fieldtype": "Table",
+   "label": "Activities",
+   "options": "Matter Timesheet",
+   "read_only": 1
+  },
+  {
+   "fieldname": "expense_section",
+   "fieldtype": "Section Break",
+   "label": "Expense"
+  },
+  {
+   "fieldname": "expense",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Expenses",
+   "options": "Matter Expense",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sb5",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Invoices"
+  },
+  {
+   "fieldname": "invoice",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Invoice",
+   "options": "Matter Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_26",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Matter",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "responsible_solicitor",
+   "fieldtype": "Link",
+   "label": "Responsible Solicitor",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "depends_on": "responsible_solicitor",
+   "fetch_from": "responsible_solicitor.employee_name",
+   "fetch_if_empty": 1,
+   "fieldname": "solicitor_name",
+   "fieldtype": "Data",
+   "label": "Solicitor Name",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2020-07-11 22:57:10.353771",
+ "modified_by": "Administrator",
+ "module": "Case Management",
+ "name": "Matter",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Lawyer Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Partners",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "client"
+}

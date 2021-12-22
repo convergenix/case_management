@@ -1,0 +1,44 @@
+<h2 class="text-center">{%= __("Matter Summary Report") %}</h2>
+<h4 class="text-center">
+	{% if (filters.responsible_solicitor) { %}
+		{%= filters.responsible_solicitor %}
+	{% } %}
+</h4>
+
+<h6 class="text-center">
+	{% if (filters.client) { %}
+	{%= __("Client: ")%}	{%= filters.client %}
+	{% } %}
+</h6>
+
+<h5 class="text-center">
+	{%= frappe.datetime.str_to_user(filters.opened_from) %}
+	{%= __("to") %}
+	{%= frappe.datetime.str_to_user(filters.opened_to) %}
+</h5>
+<hr>
+<table class="table table-bordered">
+	<thead>
+		<tr>
+			<th style="width: 12%">{%= __("Date") %}</th>
+			<th style="width: 15%">{%= __("Matter") %}</th>
+			<th style="width: 25%">{%= __("Client") %}</th>
+			<th style="width: 15%">{%= __("Status") %}</th>
+			<th style="width: 15%">{%= __("Practice Area") %}</th>
+			<th style="width: 18%">{%= __("Solicitor") %}</th>
+		</tr>
+	</thead>
+	<tbody>
+		{% for(var i=0, l=data.length-1; i<l; i++) { %}
+			<tr>
+				<td>{%= frappe.datetime.str_to_user(data[i][ __("Open Date")])  %}</td>
+				<td>{%= data[i][ __("Matter")] %}</td>
+				<td>{%= data[i][ __("Client")] %}</td>
+				<td>{%= data[i][ __("Status")] %}</td>
+				<td>{%= data[i][ __("Practice Area")] +"-"+data[i][ __("Transaction")] %}</td>
+				<td>{%= data[i][ __("Solicitor")] %}</td>
+			</tr>
+		{% } %}
+	</tbody>
+</table>
+<p class="text-right text-muted">Printed On {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}</p>

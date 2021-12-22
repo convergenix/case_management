@@ -1,0 +1,73 @@
+[
+ {
+  "apply_on": "Matter",
+  "docstatus": 0,
+  "doctype": "Folder Structure",
+  "enabled": 1,
+  "folders": [
+   {
+    "child": "Case Files",
+    "is_root": 1,
+    "parent": "Default",
+    "parent_folder": null,
+    "parentfield": "folders",
+    "parenttype": "Folder Structure"
+   },
+   {
+    "child": "Scanned documents",
+    "is_root": 1,
+    "parent": "Default",
+    "parent_folder": null,
+    "parentfield": "folders",
+    "parenttype": "Folder Structure"
+   },
+   {
+    "child": "Meetings/Memo",
+    "is_root": 1,
+    "parent": "Default",
+    "parent_folder": null,
+    "parentfield": "folders",
+    "parenttype": "Folder Structure"
+   },
+   {
+    "child": "Emails",
+    "is_root": 1,
+    "parent": "Default",
+    "parent_folder": null,
+    "parentfield": "folders",
+    "parenttype": "Folder Structure"
+   },
+   {
+    "child": "Correspondence",
+    "is_root": 1,
+    "parent": "Default",
+    "parent_folder": null,
+    "parentfield": "folders",
+    "parenttype": "Folder Structure"
+   },
+   {
+    "child": "Document",
+    "is_root": 1,
+    "parent": "Default",
+    "parent_folder": null,
+    "parentfield": "folders",
+    "parenttype": "Folder Structure"
+   },
+   {
+    "child": "Agreements",
+    "is_root": 1,
+    "parent": "Default",
+    "parent_folder": null,
+    "parentfield": "folders",
+    "parenttype": "Folder Structure"
+   }
+  ],
+  "is_default": 1,
+  "modified": "2019-12-02 10:51:44.111455",
+  "name": "Default",
+  "parent": null,
+  "parentfield": null,
+  "parenttype": null,
+  "structure_name": "Default"
+ }
+]

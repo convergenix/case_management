@@ -1,0 +1,49 @@
+{
+ "creation": "2018-01-19 14:28:16.934337",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee_type",
+  "employee",
+  "employee_name"
+ ],
+ "fields": [
+  {
+   "depends_on": "employee",
+   "fetch_from": "employee.designation",
+   "fetch_if_empty": 1,
+   "fieldname": "employee_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Title",
+   "options": "Designation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Read Only",
+   "label": "Employee Name",
+   "options": "employee.employee_name"
+  }
+ ],
+ "istable": 1,
+ "modified": "2020-06-22 20:29:13.668907",
+ "modified_by": "mymi14s@gmail.com",
+ "module": "Case Management",
+ "name": "Matter Team Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
