@@ -33,6 +33,7 @@
    "set_user_permissions": 0,
    "share": 0,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 0
   },
   {
@@ -67,6 +68,7 @@
    "set_user_permissions": 0,
    "share": 0,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 0
   },
   {
@@ -101,6 +103,7 @@
    "set_user_permissions": 0,
    "share": 0,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 0
   },
   {
@@ -135,6 +138,7 @@
    "set_user_permissions": 0,
    "share": 0,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 1
   },
   {
@@ -169,6 +173,7 @@
    "set_user_permissions": 0,
    "share": 0,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 0
   },
   {
@@ -203,6 +208,7 @@
    "set_user_permissions": 0,
    "share": 0,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 0
   },
   {
@@ -237,6 +243,7 @@
    "set_user_permissions": 1,
    "share": 1,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 1
   },
   {
@@ -271,6 +278,7 @@
    "set_user_permissions": 0,
    "share": 1,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 1
   },
   {
@@ -305,6 +313,7 @@
    "set_user_permissions": 0,
    "share": 0,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 0
   },
   {
@@ -339,6 +348,7 @@
    "set_user_permissions": 0,
    "share": 0,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 1
   },
   {
@@ -373,6 +383,7 @@
    "set_user_permissions": 0,
    "share": 0,
    "submit": 0,
+   "user_permission_doctypes": null,
    "write": 0
   }
  ],
@@ -383,14 +394,14 @@
    "_comments": null,
    "_liked_by": null,
    "_user_tags": null,
-   "creation": "2021-06-29 02:39:10.939242",
+   "creation": "2021-12-24 13:32:21.708566",
    "default_value": null,
    "doc_type": "Customer",
    "docstatus": 0,
    "doctype_or_field": "DocType",
    "field_name": null,
    "idx": 0,
-   "modified": "2021-06-29 02:39:10.939242",
+   "modified": "2021-12-24 13:32:21.708566",
    "modified_by": "Administrator",
    "name": "Customer-main-links_order",
    "owner": "Administrator",
@@ -400,7 +411,7 @@
    "property": "links_order",
    "property_type": "Small Text",
    "row_name": null,
-   "value": "[\"7b132a36a9\"]"
+   "value": "[\"1e7729c40a\", \"1fc8719fe5\"]"
   },
   {
    "_assign": null,
