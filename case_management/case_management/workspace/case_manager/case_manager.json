@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"dzBE-S-6Cw\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Case Manager</span>\",\"col\":12}},{\"id\":\"Zhecxchk3j\",\"type\":\"card\",\"data\":{\"card_name\":\"Matter\",\"col\":4}},{\"id\":\"eyoHW9Vft0\",\"type\":\"card\",\"data\":{\"card_name\":\"Billing\",\"col\":4}},{\"id\":\"wSID_ba8yn\",\"type\":\"card\",\"data\":{\"card_name\":\"HR\",\"col\":4}},{\"id\":\"hXzWesmjLE\",\"type\":\"card\",\"data\":{\"card_name\":\"Tools\",\"col\":4}},{\"id\":\"0otw_Q7WEq\",\"type\":\"card\",\"data\":{\"card_name\":\"Report\",\"col\":4}}]",
+ "content": "[{\"id\":\"dzBE-S-6Cw\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Case Manager</span>\",\"col\":12}},{\"id\":\"Zhecxchk3j\",\"type\":\"card\",\"data\":{\"card_name\":\"Matter\",\"col\":4}},{\"id\":\"eyoHW9Vft0\",\"type\":\"card\",\"data\":{\"card_name\":\"Billing\",\"col\":4}},{\"id\":\"0otw_Q7WEq\",\"type\":\"card\",\"data\":{\"card_name\":\"Report\",\"col\":4}}]",
  "creation": "2023-06-14 22:59:02.280518",
  "custom_blocks": [],
  "docstatus": 0,
@@ -139,64 +139,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Tools",
-   "link_count": 5,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "File Manager",
-   "link_count": 0,
-   "link_to": "File",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "ToDo",
-   "link_count": 0,
-   "link_to": "ToDo",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Event/Calendar",
-   "link_count": 0,
-   "link_to": "Event",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Lead",
-   "link_count": 0,
-   "link_to": "Lead",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Opportunity",
-   "link_count": 0,
-   "link_to": "Opportunity",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "HR",
    "link_count": 3,
    "onboard": 0,
@@ -233,7 +175,7 @@
    "type": "Link"
   }
  ],
- "modified": "2023-06-15 07:22:26.058795",
+ "modified": "2023-06-15 14:40:49.971316",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Case Manager",

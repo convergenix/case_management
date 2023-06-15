@@ -44,7 +44,7 @@ app_license = "MIT"
 
 # Fixtures
 #fixtures = ['Custom Field', 'Translation']
-fixtures = ["Custom Field", "Role", "Translation", "Folder", "Folder Structure",]
+fixtures = ["Custom Field", "Role", "Translation", "Folder", "Folder Structure", "Naming Series"]
 # Installation
 # ------------
 
@@ -140,8 +140,12 @@ doc_events = {
 # 	"frappe.desk.doctype.event.event.get_events": "case_management.event.get_events"
 # }
 
-
+before_migrate = [
+    "case_management.patches.v14.fix_restrict_to_domain.execute"
+]
 
 after_migrate = [
     "case_management.after_migrate.update_translation"
 ]
+
+required_apps = ["frappe", "erpnext", "hrms"]

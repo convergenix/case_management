@@ -10,3 +10,4 @@ def execute():
     frappe.db.sql("""
         UPDATE `tabModule Def` SET restrict_to_domain='';
     """)
+    frappe.db.commit()
