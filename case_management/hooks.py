@@ -139,3 +139,7 @@ doc_events = {
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "case_management.event.get_events"
 # }
+
+after_migrate = [
+    "case_management.after_migrate.update_translation"
+]
