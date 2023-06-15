@@ -2,13 +2,18 @@
  {
   "docstatus": 0,
   "doctype": "Folder",
+  "folder": "Main",
+  "is_group": 0,
+  "modified": "2019-11-25 12:15:58.770385",
+  "name": "Main"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Folder",
   "folder": "Document",
   "is_group": 0,
   "modified": "2019-09-11 10:06:27.990695",
-  "name": "Document",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "name": "Document"
  },
  {
   "docstatus": 0,
@@ -16,10 +21,7 @@
   "folder": "Agreements",
   "is_group": 0,
   "modified": "2019-09-11 10:06:39.852047",
-  "name": "Agreements",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "name": "Agreements"
  },
  {
   "docstatus": 0,
@@ -27,10 +29,7 @@
   "folder": "Correspondence",
   "is_group": 0,
   "modified": "2019-09-11 10:06:47.255993",
-  "name": "Correspondence",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "name": "Correspondence"
  },
  {
   "docstatus": 0,
@@ -38,10 +37,7 @@
   "folder": "Emails",
   "is_group": 0,
   "modified": "2019-09-11 10:06:58.819867",
-  "name": "Emails",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "name": "Emails"
  },
  {
   "docstatus": 0,
@@ -49,21 +45,15 @@
   "folder": "Meetings/Memo",
   "is_group": 0,
   "modified": "2019-09-11 10:07:07.559142",
-  "name": "Meetings/Memo",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "name": "Meetings/Memo"
  },
  {
   "docstatus": 0,
   "doctype": "Folder",
-  "folder": "Scanned documents ",
+  "folder": "Scanned documents",
   "is_group": 0,
   "modified": "2019-09-11 10:07:15.582037",
-  "name": "Scanned documents",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "name": "Scanned documents"
  },
  {
   "docstatus": 0,
@@ -71,10 +61,7 @@
   "folder": "Case Files",
   "is_group": 1,
   "modified": "2019-09-11 10:09:59.657939",
-  "name": "Case Files",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "name": "Case Files"
  },
  {
   "docstatus": 0,
@@ -82,9 +69,6 @@
   "folder": "Others",
   "is_group": 1,
   "modified": "2019-09-15 17:17:56.635054",
-  "name": "Others",
-  "parent": null,
-  "parentfield": null,
-  "parenttype": null
+  "name": "Others"
  }
 ]

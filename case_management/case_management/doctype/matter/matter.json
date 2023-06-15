@@ -110,8 +110,7 @@
    "depends_on": "practice_area",
    "fieldname": "transaction",
    "fieldtype": "Data",
-   "label": "Transaction",
-   "reqd": 1
+   "label": "Transaction"
   },
   {
    "fieldname": "team",
@@ -236,11 +235,28 @@
    "read_only": 1
   }
  ],
- "links": [],
- "modified": "2020-07-11 22:57:10.353771",
+ "links": [
+  {
+   "group": "ACTIVITIES",
+   "link_doctype": "Task",
+   "link_fieldname": "matter"
+  },
+  {
+   "group": "ACTIVITIES",
+   "link_doctype": "Event",
+   "link_fieldname": "matter"
+  },
+  {
+   "group": "ACTIVITIES",
+   "link_doctype": "File",
+   "link_fieldname": "name"
+  }
+ ],
+ "modified": "2023-06-14 23:49:43.507669",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Matter",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -271,5 +287,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "client"
 }

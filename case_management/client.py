@@ -133,7 +133,7 @@ def create_new_folder(file_name, folder, user):
             "doctype": "File",
             "file_name": file_name,
             "is_folder": 1,
-            "folder": folder
+            "folder": folder,
         })
 
         file.save(ignore_permissions=True)

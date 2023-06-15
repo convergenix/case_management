@@ -44,7 +44,7 @@ app_license = "MIT"
 
 # Fixtures
 #fixtures = ['Custom Field', 'Translation']
-fixtures = ["Custom Field", "Role", "Translation", "Folder", "Folder Structure", "Naming Series"]
+fixtures = ["Custom Field", "Role", "Translation", "Folder", "Folder Structure",]
 # Installation
 # ------------
 
@@ -139,3 +139,9 @@ doc_events = {
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "case_management.event.get_events"
 # }
+
+
+
+after_migrate = [
+    "case_management.after_migrate.update_translation"
+]
