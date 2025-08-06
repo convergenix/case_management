@@ -67,7 +67,7 @@
    "fetch_from": "matter.client",
    "fieldname": "matter_name",
    "fieldtype": "Data",
-   "label": "Matter",
+   "label": "Client",
    "read_only": 1
   },
   {
@@ -92,7 +92,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-04 14:59:15.493643",
+ "modified": "2025-08-06 13:19:08.598416",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Time Tracking",

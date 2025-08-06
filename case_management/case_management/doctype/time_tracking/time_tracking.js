@@ -13,21 +13,21 @@
 //         if (!frm.is_new() && frm.doc.status === "Time Tracking Started") {
 //             const totalSeconds = Math.floor(frm.doc.time * 3600);
 
-//             frm.fields_dict.timer.$wrapper.html(`
-//                 <div style="font-family: monospace; font-size: 16px;">
-//                     <b>🕒 Live Clock:</b> <span id="live_clock">--:--:--</span><br>
-//                     <b>⏳ Countdown:</b> <span id="countdown_timer">--:--:--</span>
-//                 </div>
-//             `);
+            // frm.fields_dict.timer.$wrapper.html(`
+            //     <div style="font-family: monospace; font-size: 16px;">
+            //         <b>🕒 Live Clock:</b> <span id="live_clock">--:--:--</span><br>
+            //         <b>⏳ Countdown:</b> <span id="countdown_timer">--:--:--</span>
+            //     </div>
+            // `);
 
-//             let remaining = totalSeconds;
+            // let remaining = totalSeconds;
 
-//             function updateLiveClock() {
-//                 const now = new Date();
-//                 const clockEl = document.getElementById("live_clock");
-//                 if (clockEl) clockEl.innerText = now.toLocaleTimeString();
-//                 setTimeout(updateLiveClock, 1000);
-//             }
+            // function updateLiveClock() {
+            //     const now = new Date();
+            //     const clockEl = document.getElementById("live_clock");
+            //     if (clockEl) clockEl.innerText = now.toLocaleTimeString();
+            //     setTimeout(updateLiveClock, 1000);
+            // }
 
 //             function updateCountdown() {
 //                 const hrs = Math.floor(remaining / 3600);
@@ -75,38 +75,269 @@
 
 
 
+// frappe.ui.form.on('Time Tracking', {
+//     refresh(frm) {
+//         if (!frm.is_new() && frm.doc.status === "Time Tracking Started") {
+//             let intervalId = null;
+
+//             function startReminderLoop() {
+//                 // Clear any previous interval
+//                 if (intervalId) clearInterval(intervalId);
+
+//                 intervalId = setInterval(() => {
+//                     frappe.confirm(
+//                         `⏰ Would you like to continue working on this Matter <b>${frm.doc.matter}</b> (Client: <b>${frm.doc.matter_name || "Unknown"}</b>)?`,
+//                         () => {
+//                             // YES: Do nothing, continue tracking
+//                         },
+//                         () => {
+//                             // NO: End time tracking
+//                             frappe.call({
+//                                 method: "case_management.case_management.doctype.time_tracking.time_tracking.finalize_time_tracking",
+//                                 args: { time_tracking: frm.doc.name },
+//                                 callback: () => {
+//                                     frappe.show_alert("Time Tracking Ended");
+//                                     frm.reload_doc();
+//                                 }
+//                             });
+//                             clearInterval(intervalId); // Stop further prompts
+//                         }
+//                     );
+//                 }, 60 * 1000); // Every 1 minute
+//             }
+
+//             startReminderLoop();
+//         }
+//     }
+// });
+
+
+
+
+
+
+// frappe.ui.form.on('Time Tracking', {
+//     refresh(frm) {
+//         if (!frm.is_new() && frm.doc.status === "Time Tracking Started") {
+//             let intervalId = null;
+//             let countdownIntervalId = null;
+
+//             // 👇 Render UI for Live Clock and Countdown
+//             if (frm.fields_dict.timer) {
+//                 frm.fields_dict.timer.$wrapper.html(`
+//                     <div style="font-family: monospace; font-size: 16px;">
+//                         <b>🕒 Live Clock:</b> <span id="live_clock">--:--:--</span><br>
+//                         <b>⏳ Countdown:</b> <span id="countdown_timer">--:--:--</span>
+//                     </div>
+//                 `);
+//             }
+
+//             // 🕒 Start Live Clock
+//             function updateLiveClock() {
+//                 const now = new Date();
+//                 const clockEl = document.getElementById("live_clock");
+//                 if (clockEl) clockEl.innerText = now.toLocaleTimeString();
+//                 setTimeout(updateLiveClock, 1000);
+//             }
+
+//             // ⏳ Countdown from 1 hour (3600 seconds)
+//             let remaining = 3600;
+
+//             function updateCountdown() {
+//                 const timerEl = document.getElementById("countdown_timer");
+//                 if (timerEl) {
+//                     const hours = Math.floor(remaining / 3600);
+//                     const minutes = Math.floor((remaining % 3600) / 60);
+//                     const seconds = remaining % 60;
+//                     timerEl.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+//                 }
+
+//                 if (remaining > 0) {
+//                     remaining--;
+//                 } else {
+//                     // Time's up! Show the hourly reminder
+//                     showContinuePrompt();
+//                     remaining = 3600; // Reset countdown
+//                 }
+//             }
+
+//             // 👇 Prompt every hour to ask if user wants to continue
+//             function showContinuePrompt() {
+//                 frappe.confirm(
+//                     `⏰ Would you like to continue working on this Matter <b>${frm.doc.matter}</b> (Client: <b>${frm.doc.matter_name || "Unknown"}</b>)?`,
+//                     () => {
+//                         // YES: Reset the countdown
+//                         remaining = 3600;
+//                     },
+//                     () => {
+//                         // NO: Finalize time tracking
+//                         frappe.call({
+//                             method: "case_management.case_management.doctype.time_tracking.time_tracking.finalize_time_tracking",
+//                             args: { time_tracking: frm.doc.name },
+//                             callback: () => {
+//                                 frappe.show_alert("Time Tracking Ended");
+//                                 clearInterval(countdownIntervalId);
+//                                 frm.reload_doc();
+//                             }
+//                         });
+//                     }
+//                 );
+//             }
+
+//             updateLiveClock(); // Start live clock
+//             countdownIntervalId = setInterval(updateCountdown, 1000); // Start countdown
+//         }
+//     }
+// });
+
+
+
+
+
+// frappe.ui.form.on('Time Tracking', {
+//     refresh(frm) {
+//         if (!frm.is_new() && frm.doc.status === "Time Tracking Started") {
+//             let countdownIntervalId = null;
+
+//             // 🖥️ Add UI elements
+//             if (frm.fields_dict.timer) {
+//                 frm.fields_dict.timer.$wrapper.html(`
+//                     <div style="font-family: monospace; font-size: 16px;">
+//                         <b>🕒 Live Clock:</b> <span id="live_clock">--:--:--</span><br>
+//                         <b>⏳ Countdown:</b> <span id="countdown_timer">--:--:--</span>
+//                     </div>
+//                 `);
+//             }
+
+//             // 🕒 Live clock updates every second
+//             function updateLiveClock() {
+//                 const now = new Date();
+//                 const clockEl = document.getElementById("live_clock");
+//                 if (clockEl) clockEl.innerText = now.toLocaleTimeString();
+//                 setTimeout(updateLiveClock, 1000);
+//             }
+
+//             // ⏳ Countdown logic (1 minute)
+//             let remaining = 3600;
+
+//             function updateCountdown() {
+//                 const timerEl = document.getElementById("countdown_timer");
+//                 if (timerEl) {
+// 					const hours = Math.floor(remaining / 3600);
+//                     const minutes = Math.floor((remaining / 3600) / 60);
+//                     const seconds = remaining % 60;
+//                     timerEl.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+//                 }
+
+//                 if (remaining > 0) {
+//                     remaining--;
+//                 } else {
+//                     showContinuePrompt();
+//                     remaining = 3600;
+//                 }
+//             }
+
+//             // ✅ The confirmation popup
+//             function showContinuePrompt() {
+//                 frappe.confirm(
+//                     `⏰ Would you like to continue working on this Matter <b>${frm.doc.matter}</b> (Client: <b>${frm.doc.matter_name || "Unknown"}</b>)?`,
+//                     () => {
+//                         // YES: Reset countdown
+//                         remaining = 3600;
+//                     },
+//                     () => {
+//                         // NO: Stop tracking and countdown
+//                         clearInterval(countdownIntervalId);
+//                         frappe.call({
+//                             method: "case_management.case_management.doctype.time_tracking.time_tracking.finalize_time_tracking",
+//                             args: { time_tracking: frm.doc.name },
+//                             callback: () => {
+//                                 frappe.show_alert("Time Tracking Ended");
+//                                 frm.reload_doc();
+//                             }
+//                         });
+//                     }
+//                 );
+//             }
+
+//             // 🚀 Start everything
+//             updateLiveClock();
+//             countdownIntervalId = setInterval(updateCountdown, 1000);
+//         }
+//     }
+// });
+
+
+
 frappe.ui.form.on('Time Tracking', {
     refresh(frm) {
         if (!frm.is_new() && frm.doc.status === "Time Tracking Started") {
-            let intervalId = null;
+            let countdownIntervalId = null;
 
-            function startReminderLoop() {
-                // Clear any previous interval
-                if (intervalId) clearInterval(intervalId);
-
-                intervalId = setInterval(() => {
-                    frappe.confirm(
-                        `⏰ Would you like to continue working on this Matter <b>${frm.doc.matter}</b> (Client: <b>${frm.doc.matter_name || "Unknown"}</b>)?`,
-                        () => {
-                            // YES: Do nothing, continue tracking
-                        },
-                        () => {
-                            // NO: End time tracking
-                            frappe.call({
-                                method: "case_management.case_management.doctype.time_tracking.time_tracking.finalize_time_tracking",
-                                args: { time_tracking: frm.doc.name },
-                                callback: () => {
-                                    frappe.show_alert("Time Tracking Ended");
-                                    frm.reload_doc();
-                                }
-                            });
-                            clearInterval(intervalId); // Stop further prompts
-                        }
-                    );
-                }, 60 * 1000); // Every 1 minute
+            // 🖥️ Add UI elements
+            if (frm.fields_dict.timer) {
+                frm.fields_dict.timer.$wrapper.html(`
+                    <div style="font-family: monospace; font-size: 16px;">
+                        <b>🕒 Live Clock:</b> <span id="live_clock">--:--:--</span><br>
+                        <b>⏳ Countdown:</b> <span id="countdown_timer">--:--:--</span>
+                    </div>
+                `);
             }
 
-            startReminderLoop();
+            // 🕒 Live clock updates every second
+            function updateLiveClock() {
+                const now = new Date();
+                const clockEl = document.getElementById("live_clock");
+                if (clockEl) clockEl.innerText = now.toLocaleTimeString();
+                setTimeout(updateLiveClock, 1000);
+            }
+
+            // ⏳ Countdown logic (1 hour = 3600 seconds)
+            let remaining = 3600;
+
+            function updateCountdown() {
+                const timerEl = document.getElementById("countdown_timer");
+                if (timerEl) {
+                    const hours = Math.floor(remaining / 3600);
+                    const minutes = Math.floor((remaining % 3600) / 60);
+                    const seconds = remaining % 60;
+                    timerEl.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+
+                if (remaining > 0) {
+                    remaining--;
+                } else {
+                    showContinuePrompt();
+                    remaining = 3600; // Reset to 1 hour
+                }
+            }
+
+            // ✅ Confirmation popup
+            function showContinuePrompt() {
+                frappe.confirm(
+                    `⏰ Would you like to continue working on this Matter <b>${frm.doc.matter}</b> (Client: <b>${frm.doc.matter_name || "Unknown"}</b>)?`,
+                    () => {
+                        // YES: Reset countdown
+                        remaining = 3600;
+                    },
+                    () => {
+                        // NO: Stop tracking and countdown
+                        clearInterval(countdownIntervalId);
+                        frappe.call({
+                            method: "case_management.case_management.doctype.time_tracking.time_tracking.finalize_time_tracking",
+                            args: { time_tracking: frm.doc.name },
+                            callback: () => {
+                                frappe.show_alert("Time Tracking Ended");
+                                frm.reload_doc();
+                            }
+                        });
+                    }
+                );
+            }
+
+            // 🚀 Start live clock and countdown
+            updateLiveClock();
+            countdownIntervalId = setInterval(updateCountdown, 1000);
         }
     }
 });
