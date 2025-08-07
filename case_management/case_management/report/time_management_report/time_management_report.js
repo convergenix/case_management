@@ -4,19 +4,24 @@
 frappe.query_reports["Time Management Report"] = {
     filters: [
         {
-            fieldname: "user",
-            label: "User",
+            fieldname: "responsible_solicitor",
+            label: "Responsible Solicitor",
             fieldtype: "Link",
-            options: "User",
-            default: frappe.session.user,
-            reqd: 1
+            options: "Employee"
+        },
+        {
+            fieldname: "from_date",
+            label: "From Date",
+            fieldtype: "Date",
+            default: frappe.datetime.add_days(frappe.datetime.get_today(), -7)
+        },
+        {
+            fieldname: "to_date",
+            label: "To Date",
+            fieldtype: "Date",
+            default: frappe.datetime.get_today()
         }
-    ],
-    formatter: function(value, row, column, data, default_formatter) {
-        // Bold total row if added
-        if (data && data.start_time === "Total") {
-            value = `<b>${value}</b>`;
-        }
-        return value;
-    }
+    ]
 };
+
+

@@ -52,7 +52,8 @@
    "fieldname": "notes",
    "fieldtype": "Text",
    "in_list_view": 1,
-   "label": "Notes"
+   "label": "Notes",
+   "reqd": 1
   },
   {
    "fieldname": "amended_from",
@@ -92,7 +93,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-06 13:19:08.598416",
+ "modified": "2025-08-07 19:25:10.547011",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Time Tracking",
