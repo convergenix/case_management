@@ -12,9 +12,9 @@ def get_columns():
     return [
         {"label": "Matter", "fieldname": "matter", "fieldtype": "Link", "options": "Matter", "width": 250},
         {"label": "Client", "fieldname": "client_name", "fieldtype": "Data", "width": 250},
-        {"label": "Solicitor", "fieldname": "responsible_solicitor", "fieldtype": "Link", "options": "Employee", "width": 200},
-        {"label": "Solicitor Name", "fieldname": "solicitor_name", "fieldtype": "Data", "width": 250},
-        {"label": "Total Time (hrs)", "fieldname": "total_time", "fieldtype": "Float", "width": 250},
+        {"label": "Employee", "fieldname": "solicitor", "fieldtype": "Link", "options": "User", "width": 200},
+        {"label": "Employee Name", "fieldname": "solicitor_name", "fieldtype": "Data", "width": 250},
+        {"label": "Total Time (hrs)", "fieldname": "total_time", "fieldtype": "Float", "width": 150},
     ]
 
 def get_data(filters):
@@ -29,22 +29,22 @@ def get_data(filters):
         conditions += " AND tt.end_time <= %(to_date)s"
         values["to_date"] = filters["to_date"]
 
-    if filters.get("responsible_solicitor"):
-        conditions += " AND m.responsible_solicitor = %(responsible_solicitor)s"
-        values["responsible_solicitor"] = filters["responsible_solicitor"]
+    if filters.get("solicitor"):
+        conditions += " AND u.name = %(solicitor)s"
+        values["solicitor"] = filters["solicitor"]
 
     return frappe.db.sql(f"""
         SELECT
             tt.matter,
             tt.matter_name AS client_name,
-            m.responsible_solicitor,
-            e.employee_name AS solicitor_name,
+            u.name AS solicitor,
+            u.full_name AS solicitor_name,
             SUM(tt.time) AS total_time
         FROM `tabTime Tracking` tt
         LEFT JOIN `tabMatter` m ON tt.matter = m.name
         LEFT JOIN `tabEmployee` e ON m.responsible_solicitor = e.name
+        LEFT JOIN `tabUser` u ON e.user_id = u.name
         WHERE {conditions}
-        GROUP BY tt.matter, tt.matter_name, m.responsible_solicitor, e.employee_name
+        GROUP BY tt.matter, tt.matter_name, u.name, u.full_name
         ORDER BY tt.matter ASC
     """, values, as_dict=True)
-
