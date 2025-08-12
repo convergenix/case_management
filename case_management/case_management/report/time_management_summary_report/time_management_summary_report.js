@@ -5,10 +5,11 @@
 frappe.query_reports["Time Management Summary Report"] = {
     filters: [
         {
-            fieldname: "responsible_solicitor",
+            fieldname: "user",
             label: "User",
             fieldtype: "Link",
-            options: "User"
+            options: "User",
+            default: frappe.session.user
         },
         {
             fieldname: "from_date",

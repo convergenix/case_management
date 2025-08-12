@@ -1,6 +1,7 @@
 # Copyright (c) 2025, masonarmani38@gmail.com and contributors
 # For license information, please see license.txt
 
+
 import frappe
 
 def execute(filters=None):
@@ -10,8 +11,9 @@ def execute(filters=None):
 
 def get_columns():
     return [
-        {"label": "User", "fieldname": "solicitor", "fieldtype": "Link", "options": "User", "width": 180},
-        {"label": "User Name", "fieldname": "solicitor_name", "fieldtype": "Data", "width": 200},
+        {"label": "Date", "fieldname": "creation", "fieldtype": "Date", "width": 180},
+        {"label": "User", "fieldname": "creator_name", "fieldtype": "Data", "width": 200},
+        # {"label": "User", "fieldname": "creator", "fieldtype": "Link", "options": "User", "width": 180},  
         {"label": "Time (hrs)", "fieldname": "time", "fieldtype": "Float", "width": 100},
         {"label": "Matter", "fieldname": "matter", "fieldtype": "Link", "options": "Matter", "width": 200},
         {"label": "Client", "fieldname": "client_name", "fieldtype": "Data", "width": 200},
@@ -30,22 +32,22 @@ def get_data(filters):
         conditions += " AND tt.end_time <= %(to_date)s"
         values["to_date"] = filters["to_date"]
 
-    if filters.get("solicitor"):
-        conditions += " AND u.name = %(solicitor)s"
-        values["solicitor"] = filters["solicitor"]
+    if filters.get("user"):
+        conditions += " AND tt.owner = %(user)s"
+        values["user"] = filters["user"]
 
     return frappe.db.sql(f"""
         SELECT
-            u.name AS solicitor,
-            u.full_name AS solicitor_name,
+            tt.creation,
+            tt.owner AS creator,
+            u.full_name AS creator_name,
             tt.time,
             tt.matter,
             tt.matter_name AS client_name,
             tt.notes
         FROM `tabTime Tracking` tt
-        LEFT JOIN `tabMatter` m ON tt.matter = m.name
-        LEFT JOIN `tabEmployee` e ON m.responsible_solicitor = e.name
-        LEFT JOIN `tabUser` u ON e.user_id = u.name
+        LEFT JOIN `tabUser` u ON tt.owner = u.name
         WHERE {conditions}
-        ORDER BY tt.start_time ASC
+        ORDER BY tt.creation ASC
     """, values, as_dict=True)
+

@@ -10,10 +10,9 @@ def execute(filters=None):
 
 def get_columns():
     return [
+        {"label": "User", "fieldname": "creator_name", "fieldtype": "Data", "width": 250},
         {"label": "Matter", "fieldname": "matter", "fieldtype": "Link", "options": "Matter", "width": 250},
-        {"label": "Client", "fieldname": "client_name", "fieldtype": "Data", "width": 250},
-        {"label": "User", "fieldname": "solicitor", "fieldtype": "Link", "options": "User", "width": 200},
-        {"label": "User Name", "fieldname": "solicitor_name", "fieldtype": "Data", "width": 250},
+        {"label": "Client", "fieldname": "client_name", "fieldtype": "Data", "width": 250},  
         {"label": "Total Time (hrs)", "fieldname": "total_time", "fieldtype": "Float", "width": 150},
     ]
 
@@ -29,22 +28,20 @@ def get_data(filters):
         conditions += " AND tt.end_time <= %(to_date)s"
         values["to_date"] = filters["to_date"]
 
-    if filters.get("solicitor"):
-        conditions += " AND u.name = %(solicitor)s"
-        values["solicitor"] = filters["solicitor"]
+    if filters.get("user"):
+        conditions += " AND tt.owner = %(user)s"
+        values["user"] = filters["user"]
 
     return frappe.db.sql(f"""
         SELECT
             tt.matter,
             tt.matter_name AS client_name,
-            u.name AS solicitor,
-            u.full_name AS solicitor_name,
+            tt.owner AS creator,
+            u.full_name AS creator_name,
             SUM(tt.time) AS total_time
         FROM `tabTime Tracking` tt
-        LEFT JOIN `tabMatter` m ON tt.matter = m.name
-        LEFT JOIN `tabEmployee` e ON m.responsible_solicitor = e.name
-        LEFT JOIN `tabUser` u ON e.user_id = u.name
+        LEFT JOIN `tabUser` u ON tt.owner = u.name
         WHERE {conditions}
-        GROUP BY tt.matter, tt.matter_name, u.name, u.full_name
+        GROUP BY tt.matter, tt.matter_name, tt.owner, u.full_name
         ORDER BY tt.matter ASC
     """, values, as_dict=True)
