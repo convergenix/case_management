@@ -12,8 +12,8 @@ def get_columns():
     return [
         {"label": "Matter", "fieldname": "matter", "fieldtype": "Link", "options": "Matter", "width": 250},
         {"label": "Client", "fieldname": "client_name", "fieldtype": "Data", "width": 250},
-        {"label": "Employee", "fieldname": "solicitor", "fieldtype": "Link", "options": "User", "width": 200},
-        {"label": "Employee Name", "fieldname": "solicitor_name", "fieldtype": "Data", "width": 250},
+        {"label": "User", "fieldname": "solicitor", "fieldtype": "Link", "options": "User", "width": 200},
+        {"label": "User Name Name", "fieldname": "solicitor_name", "fieldtype": "Data", "width": 250},
         {"label": "Total Time (hrs)", "fieldname": "total_time", "fieldtype": "Float", "width": 150},
     ]
 
