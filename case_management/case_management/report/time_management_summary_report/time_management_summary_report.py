@@ -43,5 +43,5 @@ def get_data(filters):
         LEFT JOIN `tabUser` u ON tt.owner = u.name
         WHERE {conditions}
         GROUP BY tt.matter, tt.matter_name, tt.owner, u.full_name
-        ORDER BY tt.matter ASC
+        ORDER BY tt.matter DESC
     """, values, as_dict=True)

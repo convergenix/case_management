@@ -48,6 +48,6 @@ def get_data(filters):
         FROM `tabTime Tracking` tt
         LEFT JOIN `tabUser` u ON tt.owner = u.name
         WHERE {conditions}
-        ORDER BY tt.creation ASC
+        ORDER BY tt.creation DESC
     """, values, as_dict=True)
 
