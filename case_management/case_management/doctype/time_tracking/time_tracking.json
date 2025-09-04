@@ -9,10 +9,12 @@
   "timer",
   "matter",
   "matter_name",
+  "billing",
   "date",
   "start_time",
   "end_time",
   "time",
+  "revenue",
   "status",
   "notes",
   "amended_from"
@@ -50,9 +52,9 @@
   },
   {
    "fieldname": "notes",
-   "fieldtype": "Text",
+   "fieldtype": "Small Text",
    "in_list_view": 1,
-   "label": "Notes",
+   "label": "Activity",
    "reqd": 1
   },
   {
@@ -89,11 +91,25 @@
    "fieldtype": "Data",
    "label": "Status",
    "read_only": 1
+  },
+  {
+   "fieldname": "billing",
+   "fieldtype": "Select",
+   "label": "Billing",
+   "options": "Billable\nNon-Billable",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "revenue",
+   "fieldtype": "Currency",
+   "label": "Revenue",
+   "read_only": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-07 19:25:10.547011",
+ "modified": "2025-09-04 13:27:07.201818",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Time Tracking",

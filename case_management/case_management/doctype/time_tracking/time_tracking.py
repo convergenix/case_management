@@ -6,12 +6,49 @@ from __future__ import unicode_literals
 import frappe
 from frappe.model.document import Document
 from frappe.utils import time_diff_in_hours
+from frappe.utils import now
 from frappe.core.doctype.communication.email import make
 
+# class TimeTracking(Document):
+# 	def on_submit(self):
+# 		if self.start_time:
+# 			self.status = "Time Tracking Started"
 class TimeTracking(Document):
 	def on_submit(self):
 		if self.start_time:
 			self.status = "Time Tracking Started"
+
+		# calculate revenue if applicable
+		self.calculate_revenue()
+
+	def before_save(self):
+		# recalc revenue on every save if billable
+		self.calculate_revenue()
+
+	def calculate_revenue(self):
+		"""Calculate revenue only if Billable."""
+		if self.billing == "Billable" and self.time and self.matter:
+			# Get responsible solicitor (Employee) from Matter
+			matter = frappe.get_doc("Matter", self.matter)
+			if matter.responsible_solicitor:
+				employee = frappe.get_doc("Employee", matter.responsible_solicitor)
+
+				# Look up billing rate for this employee
+				billing_rate = frappe.db.get_value(
+					"Billing Details",
+					{"employee": employee.name},
+					"billing_rate"
+				)
+
+				if billing_rate:
+					self.revenue = float(billing_rate) * float(self.time)
+				else:
+					self.revenue = 0
+			else:
+				self.revenue = 0
+		else:
+			# Non-Billable or missing data → no calculation
+			self.revenue = 0
 
 
 @frappe.whitelist()
@@ -19,6 +56,7 @@ def end_time_tracking(time_tracking):
     doc = frappe.get_doc("Time Tracking", time_tracking)
     # doc.db_set("status", "Time Tracking Ended")
     doc.status = "Time Tracking Ended"
+    doc.calculate_revenue()
     doc.save()
     frappe.db.commit()
 
@@ -62,6 +100,56 @@ def end_time_tracking(time_tracking):
 
 
 
+# @frappe.whitelist()
+# def stop_time_tracking_now(time_tracking):
+#     from frappe.utils import now_datetime, time_diff_in_hours
+
+#     doc = frappe.get_doc("Time Tracking", time_tracking)
+
+#     end_time = now_datetime()
+#     doc.db_set("end_time", end_time)
+
+#     if doc.start_time:
+#         hours = time_diff_in_hours(end_time, doc.start_time)
+#         doc.db_set("time", hours)
+
+#     doc.db_set("status", "Time Tracking Ended")
+
+#     # Optional: Send notifications like before
+#     user_email = None
+#     client_name = "Unknown Client"
+#     matter_id = "Unknown Matter"
+
+#     if doc.matter:
+#         matter = frappe.get_doc("Matter", doc.matter)
+#         matter_id = matter.name
+#         client_name = matter.client or "Unknown Client"
+
+#         if matter.responsible_solicitor:
+#             employee = frappe.get_doc("Employee", matter.responsible_solicitor)
+#             user_email = employee.user_id
+
+#     message = f"""
+#         Time Tracking for Matter <b>{matter_id}</b> has been manually stopped.<br>
+#         Client: {client_name}
+#     """
+
+#     if user_email:
+#         frappe.publish_realtime(
+#             event="msgprint",
+#             message=f"⏰ Time Tracking Ended for Matter {matter_id} (Client: {client_name})",
+#             user=user_email,
+#         )
+
+#         frappe.sendmail(
+#             recipients=[user_email],
+#             subject="Time Tracking Ended",
+#             message=message
+#         )
+	
+#     frappe.db.commit()
+#     return "Stopped"
+
 @frappe.whitelist()
 def stop_time_tracking_now(time_tracking):
     from frappe.utils import now_datetime, time_diff_in_hours
@@ -69,15 +157,22 @@ def stop_time_tracking_now(time_tracking):
     doc = frappe.get_doc("Time Tracking", time_tracking)
 
     end_time = now_datetime()
-    doc.db_set("end_time", end_time)
+    doc.end_time = end_time
 
     if doc.start_time:
         hours = time_diff_in_hours(end_time, doc.start_time)
-        doc.db_set("time", hours)
+        doc.time = hours
 
-    doc.db_set("status", "Time Tracking Ended")
+    doc.status = "Time Tracking Ended"
 
-    # Optional: Send notifications like before
+    # ✅ Recalculate revenue
+    doc.calculate_revenue()
+
+    # Save with all updates
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    # Notifications
     user_email = None
     client_name = "Unknown Client"
     matter_id = "Unknown Matter"
@@ -93,7 +188,8 @@ def stop_time_tracking_now(time_tracking):
 
     message = f"""
         Time Tracking for Matter <b>{matter_id}</b> has been manually stopped.<br>
-        Client: {client_name}
+        Client: {client_name}<br>
+        Revenue: {doc.revenue or 0}
     """
 
     if user_email:
@@ -108,13 +204,11 @@ def stop_time_tracking_now(time_tracking):
             subject="Time Tracking Ended",
             message=message
         )
-
-    frappe.db.commit()
+	
     return "Stopped"
 
 
 
-from frappe.utils import now
 
 @frappe.whitelist()
 def finalize_time_tracking(time_tracking):
@@ -127,6 +221,7 @@ def finalize_time_tracking(time_tracking):
     doc.end_time = frappe.utils.now_datetime()
     doc.time = frappe.utils.time_diff_in_hours(doc.end_time, doc.start_time)
     doc.status = "Time Tracking Ended"
+    doc.calculate_revenue()
     doc.save(ignore_permissions=True)
     frappe.db.commit()
 
