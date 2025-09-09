@@ -14,10 +14,11 @@
   "start_time",
   "end_time",
   "time",
-  "revenue",
   "status",
   "notes",
-  "amended_from"
+  "amended_from",
+  "revenue_tab",
+  "revenue"
  ],
  "fields": [
   {
@@ -52,7 +53,7 @@
   },
   {
    "fieldname": "notes",
-   "fieldtype": "Small Text",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Activity",
    "reqd": 1
@@ -105,11 +106,16 @@
    "fieldtype": "Currency",
    "label": "Revenue",
    "read_only": 1
+  },
+  {
+   "fieldname": "revenue_tab",
+   "fieldtype": "Tab Break",
+   "label": "Revenue"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2025-09-04 13:27:07.201818",
+ "modified": "2025-09-09 14:29:30.409127",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Time Tracking",

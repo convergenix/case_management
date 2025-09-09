@@ -31,13 +31,12 @@
    "description": "Billing per Hour",
    "fieldname": "billing_rate",
    "fieldtype": "Currency",
-   "in_standard_filter": 1,
    "label": "Billing Rate"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-04 13:25:08.661907",
+ "modified": "2025-09-09 15:15:53.372926",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Billing Details",

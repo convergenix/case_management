@@ -9,10 +9,6 @@ from frappe.utils import time_diff_in_hours
 from frappe.utils import now
 from frappe.core.doctype.communication.email import make
 
-# class TimeTracking(Document):
-# 	def on_submit(self):
-# 		if self.start_time:
-# 			self.status = "Time Tracking Started"
 class TimeTracking(Document):
 	def on_submit(self):
 		if self.start_time:
@@ -24,19 +20,19 @@ class TimeTracking(Document):
 	def before_save(self):
 		# recalc revenue on every save if billable
 		self.calculate_revenue()
-
+    
 	def calculate_revenue(self):
 		"""Calculate revenue only if Billable."""
-		if self.billing == "Billable" and self.time and self.matter:
-			# Get responsible solicitor (Employee) from Matter
-			matter = frappe.get_doc("Matter", self.matter)
-			if matter.responsible_solicitor:
-				employee = frappe.get_doc("Employee", matter.responsible_solicitor)
+		if self.billing == "Billable" and self.time:
+			# Get employee linked to the user who created this Time Tracking
+			user = self.owner  # system user who created the record
+			employee = frappe.db.get_value("Employee", {"user_id": user}, "name")
 
+			if employee:
 				# Look up billing rate for this employee
 				billing_rate = frappe.db.get_value(
 					"Billing Details",
-					{"employee": employee.name},
+					{"employee": employee},
 					"billing_rate"
 				)
 
@@ -49,6 +45,32 @@ class TimeTracking(Document):
 		else:
 			# Non-Billable or missing data → no calculation
 			self.revenue = 0
+
+
+	# def calculate_revenue(self):
+	# 	"""Calculate revenue only if Billable."""
+	# 	if self.billing == "Billable" and self.time and self.matter:
+	# 		# Get responsible solicitor (Employee) from Matter
+	# 		matter = frappe.get_doc("Matter", self.matter)
+	# 		if matter.responsible_solicitor:
+	# 			employee = frappe.get_doc("Employee", matter.responsible_solicitor)
+
+	# 			# Look up billing rate for this employee
+	# 			billing_rate = frappe.db.get_value(
+	# 				"Billing Details",
+	# 				{"employee": employee.name},
+	# 				"billing_rate"
+	# 			)
+
+	# 			if billing_rate:
+	# 				self.revenue = float(billing_rate) * float(self.time)
+	# 			else:
+	# 				self.revenue = 0
+	# 		else:
+	# 			self.revenue = 0
+	# 	else:
+	# 		# Non-Billable or missing data → no calculation
+	# 		self.revenue = 0
 
 
 @frappe.whitelist()
@@ -100,55 +122,6 @@ def end_time_tracking(time_tracking):
 
 
 
-# @frappe.whitelist()
-# def stop_time_tracking_now(time_tracking):
-#     from frappe.utils import now_datetime, time_diff_in_hours
-
-#     doc = frappe.get_doc("Time Tracking", time_tracking)
-
-#     end_time = now_datetime()
-#     doc.db_set("end_time", end_time)
-
-#     if doc.start_time:
-#         hours = time_diff_in_hours(end_time, doc.start_time)
-#         doc.db_set("time", hours)
-
-#     doc.db_set("status", "Time Tracking Ended")
-
-#     # Optional: Send notifications like before
-#     user_email = None
-#     client_name = "Unknown Client"
-#     matter_id = "Unknown Matter"
-
-#     if doc.matter:
-#         matter = frappe.get_doc("Matter", doc.matter)
-#         matter_id = matter.name
-#         client_name = matter.client or "Unknown Client"
-
-#         if matter.responsible_solicitor:
-#             employee = frappe.get_doc("Employee", matter.responsible_solicitor)
-#             user_email = employee.user_id
-
-#     message = f"""
-#         Time Tracking for Matter <b>{matter_id}</b> has been manually stopped.<br>
-#         Client: {client_name}
-#     """
-
-#     if user_email:
-#         frappe.publish_realtime(
-#             event="msgprint",
-#             message=f"⏰ Time Tracking Ended for Matter {matter_id} (Client: {client_name})",
-#             user=user_email,
-#         )
-
-#         frappe.sendmail(
-#             recipients=[user_email],
-#             subject="Time Tracking Ended",
-#             message=message
-#         )
-	
-#     frappe.db.commit()
-#     return "Stopped"
 
 @frappe.whitelist()
 def stop_time_tracking_now(time_tracking):
