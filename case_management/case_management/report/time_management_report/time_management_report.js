@@ -11,6 +11,12 @@ frappe.query_reports["Time Management Report"] = {
             default: frappe.session.user
         },
         {
+            fieldname: "client",
+            label: "Client",
+            fieldtype: "Link",
+            options: "Client"   // Assuming your doctype is "Client"
+        },
+        {
             fieldname: "from_date",
             label: "From Date",
             fieldtype: "Date",
@@ -24,6 +30,7 @@ frappe.query_reports["Time Management Report"] = {
         }
     ]
 };
+
 
 
 
