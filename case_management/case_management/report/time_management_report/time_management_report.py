@@ -11,13 +11,13 @@ def execute(filters=None):
 
 def get_columns():
     return [
-        {"label": "Date", "fieldname": "creation", "fieldtype": "Date", "width": 180},
-        {"label": "User", "fieldname": "creator_name", "fieldtype": "Data", "width": 200},
-        # {"label": "User", "fieldname": "creator", "fieldtype": "Link", "options": "User", "width": 180},  
-        {"label": "Time (hrs)", "fieldname": "time", "fieldtype": "Float", "width": 100},
+        {"label": "Description", "fieldname": "notes", "fieldtype": "Data", "width": 300},
+        {"label": "Duration", "fieldname": "time", "fieldtype": "Float", "width": 100},
+        {"label": "Member", "fieldname": "creator_name", "fieldtype": "Data", "width": 200},
+        {"label": "Start Date", "fieldname": "creation", "fieldtype": "Date", "width": 180},
         {"label": "Matter", "fieldname": "matter", "fieldtype": "Link", "options": "Matter", "width": 200},
         {"label": "Client", "fieldname": "client_name", "fieldtype": "Data", "width": 200},
-        {"label": "Notes", "fieldname": "notes", "fieldtype": "Data", "width": 400},
+        # {"label": "User", "fieldname": "creator", "fieldtype": "Link", "options": "User", "width": 180},  
     ]
 
 def get_data(filters):
