@@ -25,17 +25,26 @@ def get_data(filters):
     values = {}
 
     if filters.get("from_date"):
-        conditions += " AND tt.start_time >= %(from_date)s"
+        # compare dates to DATETIME safely
+        conditions += " AND DATE(tt.start_time) >= %(from_date)s"
         values["from_date"] = filters["from_date"]
 
     if filters.get("to_date"):
-        conditions += " AND tt.end_time <= %(to_date)s"
+        conditions += " AND DATE(tt.end_time) <= %(to_date)s"
         values["to_date"] = filters["to_date"]
 
     if filters.get("user"):
         conditions += " AND tt.owner = %(user)s"
         values["user"] = filters["user"]
 
+    if filters.get("client"):
+        # Handles both cases:
+        #  - Time Tracking stores client in tt.matter_name
+        #  - or Matter has a client link m.client
+        conditions += " AND (tt.matter_name = %(client)s OR m.client = %(client)s)"
+        values["client"] = filters["client"]
+
+    # Make sure we join Matter so m.client is available
     return frappe.db.sql(f"""
         SELECT
             tt.creation,
@@ -47,6 +56,7 @@ def get_data(filters):
             tt.notes
         FROM `tabTime Tracking` tt
         LEFT JOIN `tabUser` u ON tt.owner = u.name
+        LEFT JOIN `tabMatter` m ON tt.matter = m.name
         WHERE {conditions}
         ORDER BY tt.creation DESC
     """, values, as_dict=True)

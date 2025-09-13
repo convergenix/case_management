@@ -14,7 +14,7 @@ frappe.query_reports["Time Management Report"] = {
             fieldname: "client",
             label: "Client",
             fieldtype: "Link",
-            options: "Client"   // Assuming your doctype is "Client"
+            options: "Customer"   // Assuming your doctype is "Client"
         },
         {
             fieldname: "from_date",
