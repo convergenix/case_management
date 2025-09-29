@@ -18,7 +18,8 @@
   "notes",
   "amended_from",
   "revenue_tab",
-  "revenue"
+  "revenue",
+  "revenue_in_naira"
  ],
  "fields": [
   {
@@ -103,19 +104,27 @@
   {
    "allow_on_submit": 1,
    "fieldname": "revenue",
-   "fieldtype": "Currency",
+   "fieldtype": "Data",
    "label": "Revenue",
    "read_only": 1
   },
   {
+   "default": "USD",
    "fieldname": "revenue_tab",
    "fieldtype": "Tab Break",
    "label": "Revenue"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "revenue_in_naira",
+   "fieldtype": "Currency",
+   "label": "Revenue in Naira",
+   "read_only": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2025-09-13 11:00:09.241500",
+ "modified": "2025-09-29 13:03:26.552253",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Time Tracking",

@@ -6,37 +6,46 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "employee",
-  "employee_name",
-  "billing_rate"
+  "customer",
+  "customer_name",
+  "billing_rate",
+  "billing_currency"
  ],
  "fields": [
-  {
-   "fieldname": "employee",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Employee",
-   "options": "Employee",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "employee.employee_name",
-   "fieldname": "employee_name",
-   "fieldtype": "Data",
-   "label": "Employee Name",
-   "read_only": 1
-  },
   {
    "description": "Billing per Hour",
    "fieldname": "billing_rate",
    "fieldtype": "Currency",
-   "label": "Billing Rate"
+   "label": "Billing Rate",
+   "options": "USD"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Client",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "customer.customer_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Client Name",
+   "read_only": 1
+  },
+  {
+   "default": "USD",
+   "fieldname": "billing_currency",
+   "fieldtype": "Link",
+   "label": "Billing Currency",
+   "options": "Currency"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-09 15:15:53.372926",
+ "modified": "2025-09-29 13:23:33.470614",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Billing Details",

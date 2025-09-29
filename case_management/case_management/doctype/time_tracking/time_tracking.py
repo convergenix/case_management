@@ -8,6 +8,8 @@ from frappe.model.document import Document
 from frappe.utils import time_diff_in_hours
 from frappe.utils import now
 from frappe.core.doctype.communication.email import make
+from frappe.utils import flt
+from erpnext.setup.utils import get_exchange_rate
 
 class TimeTracking(Document):
 	def on_submit(self):
@@ -21,44 +23,18 @@ class TimeTracking(Document):
 		# recalc revenue on every save if billable
 		self.calculate_revenue()
     
-	def calculate_revenue(self):
-		"""Calculate revenue only if Billable."""
-		if self.billing == "Billable" and self.time:
-			# Get employee linked to the user who created this Time Tracking
-			user = self.owner  # system user who created the record
-			employee = frappe.db.get_value("Employee", {"user_id": user}, "name")
-
-			if employee:
-				# Look up billing rate for this employee
-				billing_rate = frappe.db.get_value(
-					"Billing Details",
-					{"employee": employee},
-					"billing_rate"
-				)
-
-				if billing_rate:
-					self.revenue = float(billing_rate) * float(self.time)
-				else:
-					self.revenue = 0
-			else:
-				self.revenue = 0
-		else:
-			# Non-Billable or missing data → no calculation
-			self.revenue = 0
-
-
 	# def calculate_revenue(self):
 	# 	"""Calculate revenue only if Billable."""
-	# 	if self.billing == "Billable" and self.time and self.matter:
-	# 		# Get responsible solicitor (Employee) from Matter
-	# 		matter = frappe.get_doc("Matter", self.matter)
-	# 		if matter.responsible_solicitor:
-	# 			employee = frappe.get_doc("Employee", matter.responsible_solicitor)
+	# 	if self.billing == "Billable" and self.time:
+	# 		# Get employee linked to the user who created this Time Tracking
+	# 		user = self.owner  # system user who created the record
+	# 		employee = frappe.db.get_value("Employee", {"user_id": user}, "name")
 
+	# 		if employee:
 	# 			# Look up billing rate for this employee
 	# 			billing_rate = frappe.db.get_value(
 	# 				"Billing Details",
-	# 				{"employee": employee.name},
+	# 				{"employee": employee},
 	# 				"billing_rate"
 	# 			)
 
@@ -71,6 +47,66 @@ class TimeTracking(Document):
 	# 	else:
 	# 		# Non-Billable or missing data → no calculation
 	# 		self.revenue = 0
+
+
+	def calculate_revenue(self):
+		"""Calculate revenue based on customer's billing currency.
+		If USD → store formatted in dollars and also convert to naira.
+		If NGN → store formatted in naira and skip conversion.
+		"""
+		if self.billing == "Billable" and self.time:
+			customer = self.matter_name  # assumes Time Tracking has a 'customer' field
+
+			if customer:
+				# Fetch billing rate and currency from Billing Details
+				billing_rate, billing_currency = frappe.db.get_value(
+					"Billing Details",
+					{"customer": customer},
+					["billing_rate", "billing_currency"]
+				) or (0, "USD")
+
+				if billing_rate:
+					if billing_currency == "USD":
+						# Revenue in USD
+						revenue_usd = round(float(billing_rate) * float(self.time), 2)
+						self.revenue = f"$ {revenue_usd:,.2f}"
+
+						# Convert to NGN
+						usd_to_ngn = get_exchange_rate("USD", "NGN")
+						self.revenue_in_naira = round(flt(revenue_usd) * flt(usd_to_ngn), 2)
+						self.exchange_rate_used = flt(usd_to_ngn)
+
+					elif billing_currency == "NGN":
+						# Revenue in NGN directly
+						revenue_ngn = round(float(billing_rate) * float(self.time), 2)
+						self.revenue = f"₦ {revenue_ngn:,.2f}"
+
+						# No conversion needed
+						self.revenue_in_naira = revenue_ngn
+						self.exchange_rate_used = 1
+
+					else:
+						# Any other currency → first convert to USD
+						rate_to_usd = get_exchange_rate(billing_currency, "USD")
+						revenue_usd = round(float(billing_rate) * float(self.time) * flt(rate_to_usd), 2)
+						self.revenue = f"$ {revenue_usd:,.2f}"
+
+						# Convert USD → NGN
+						usd_to_ngn = get_exchange_rate("USD", "NGN")
+						self.revenue_in_naira = round(flt(revenue_usd) * flt(usd_to_ngn), 2)
+						self.exchange_rate_used = flt(usd_to_ngn)
+
+				else:
+					self.revenue = "$ 0.00"
+					self.revenue_in_naira = 0
+			else:
+				self.revenue = "$ 0.00"
+				self.revenue_in_naira = 0
+		else:
+			self.revenue = "$ 0.00"
+			self.revenue_in_naira = 0
+
+
 
 
 @frappe.whitelist()
