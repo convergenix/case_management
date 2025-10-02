@@ -34,8 +34,13 @@ frappe.ui.form.on('Matter', {
                 //     open_mapped_doc("case_management.case_management.doctype.matter.matter.make_timesheet");
                 // }).css({"background-color": "rgb(20, 62, 22)", "color": 'white', "font-weight": 'bolder'});
 
-                frm.add_custom_button(__('View Calendar/Events'), function () {
-                    frappe.set_route("List", "Event", {'matter': frm.doc.name});
+				// frm.add_custom_button(__('Case Folder'), function () {
+				// 	frappe.set_route("List", "File", "Home", "Clients", cur_frm.doc.client, cur_frm.doc.name);
+				// }, "View");
+				
+
+                frm.add_custom_button(__('Case Folder'), function () {
+                    frappe.set_route("List", "File", "Home", "Clients", cur_frm.doc.client, cur_frm.doc.name);
                 }).css({"background-color": "rgb(40, 68, 22)", "color": 'white', "font-weight": 'bolder'});
 
                 //
