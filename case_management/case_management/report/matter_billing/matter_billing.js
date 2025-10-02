@@ -3,38 +3,33 @@
 /* eslint-disable */
 
 frappe.query_reports["Matter Billing"] = {
-	"filters": [
+    "filters": [
         {
             "fieldname": "opened_from",
             "label": __("Transactions From"),
             "fieldtype": "Date",
-            "width": "80",
             "reqd": 1,
-            "default": dateutil.year_start()
+            "default": frappe.datetime.year_start()
         },
         {
             "fieldname": "opened_to",
             "label": __("Transactions To"),
             "fieldtype": "Date",
-            "width": "80",
             "reqd": 1,
-            "default": dateutil.year_end()
+            "default": frappe.datetime.year_end()
         },
         {
             "fieldname": "client",
             "label": __("Client"),
             "fieldtype": "Link",
-            "options":"Customer",
-            "width": "80",
-            "reqd": 0,
+            "options": "Customer"
         },
         {
             "fieldname": "matter",
             "label": __("Matter ID"),
             "fieldtype": "Link",
-            "options":"Matter",
-            "width": "80",
-            "reqd": 0,
+            "options": "Matter"
         }
-	]
+    ]
 };
+

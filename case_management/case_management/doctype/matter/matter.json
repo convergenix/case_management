@@ -59,7 +59,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Open\nPending\nClosed"
+   "options": "Open\nPending Document\nAwaiting Filing\nOn-Hold\nFiled\nIn Mediation/Arbitration\nAwaiting Judgement/ Ruling\nPending\nClosed"
   },
   {
    "fieldname": "naming_series",
@@ -237,10 +237,11 @@
   }
  ],
  "links": [],
- "modified": "2020-07-11 22:57:10.353771",
+ "modified": "2025-10-02 20:32:30.682934",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Matter",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -271,5 +272,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "client"
 }

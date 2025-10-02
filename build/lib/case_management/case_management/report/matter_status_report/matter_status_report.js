@@ -7,27 +7,25 @@ frappe.query_reports["Matter Status Report"] = {
             "fieldname": "opened_from",
             "label": __("Opened From"),
             "fieldtype": "Date",
-            "width": "80",
             "reqd": 1,
-            "default": dateutil.year_start()
+            "default": frappe.datetime.year_start()
         },
         {
             "fieldname": "opened_to",
             "label": __("Opened To"),
             "fieldtype": "Date",
-            "width": "80",
             "reqd": 1,
-            "default": dateutil.year_end()
-        }, {
+            "default": frappe.datetime.year_end()
+        },
+        {
             "fieldname": "status",
             "label": __("Status"),
             "fieldtype": "Select",
-            "width": "80",
-            "reqd": 0,
             "default": "",
-            "options": [
-                "Draft", "Closed", "Open"
-            ]
-        },
+            "options": ["", "Draft", "Open", "Pending Document", "Awaiting Filing",
+                "On-Hold", "Filed", "In Mediation/Arbitration",
+                "Awaiting Judgement/ Ruling", "Pending", "Closed"]
+        }
     ]
 };
+

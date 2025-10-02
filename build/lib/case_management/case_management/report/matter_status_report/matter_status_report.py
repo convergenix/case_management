@@ -10,40 +10,89 @@ def execute(filters=None):
     return get_column(), get_data(filters)
 
 
+# def get_data(filters):
+#     conditions = "(1=1) "
+#     if filters.get('opened_from') and filters.get('opened_to'):
+#         conditions += " and open_date  BETWEEN '{0}' and '{1}'" .format(
+#             filters.get("opened_from"),filters.get('opened_to'))
+
+#     if filters.get('status'):
+#         conditions += " and status = '{0}'".format(filters.get("status"))
+
+#     if filters.get('client'):
+#         conditions += " and client = '{0}'".format(filters.get("client"))
+
+#     if filters.get('matter'):
+#         conditions += " and matter = '{0}'".format(filters.get("matter"))
+
+#     if filters.get('responsible_solicitor'):
+#         conditions += " and responsible_solicitor = '{0}'".format(filters.get("responsible_solicitor"))
+
+#     # open_date, matter, client , status , practice_area , responsible_solicitor, close_date
+#     sql = "select open_date, name, client , status , practice_area , responsible_solicitor, close_date ,\
+#  				matter_information from `tabMatter` WHERE {0}"
+#     data = frappe.db.sql(sql.format(conditions))
+#     return  data
+
+
+# def get_column():
+#     # ["Link:Link/Accident:150", "Data:Data:200", "Currency:Currency:100", "Float:Float:100"]
+#     return [
+#         _("Open Date")+":Data:100",
+#         "Matter:Link/Matter:100",
+#         "Client:Link/Customer:100",
+#         "Status:Data:70",
+#         "Practice Area:Link/Practice Area:100",
+#         "Solicitor:Link/Employee:100",
+#         "Close Date:Date:100",
+#         "Information:Data:200",
+#     ]
 def get_data(filters):
     conditions = "(1=1) "
     if filters.get('opened_from') and filters.get('opened_to'):
-        conditions += " and open_date  BETWEEN '{0}' and '{1}'" .format(
-            filters.get("opened_from"),filters.get('opened_to'))
+        conditions += " and m.open_date BETWEEN '{0}' and '{1}'".format(
+            filters.get("opened_from"), filters.get('opened_to'))
 
     if filters.get('status'):
-        conditions += " and status = '{0}'".format(filters.get("status"))
+        conditions += " and m.status = '{0}'".format(filters.get("status"))
 
     if filters.get('client'):
-        conditions += " and client = '{0}'".format(filters.get("client"))
+        conditions += " and m.client = '{0}'".format(filters.get("client"))
 
     if filters.get('matter'):
-        conditions += " and matter = '{0}'".format(filters.get("matter"))
+        conditions += " and m.matter = '{0}'".format(filters.get("matter"))
 
     if filters.get('responsible_solicitor'):
-        conditions += " and responsible_solicitor = '{0}'".format(filters.get("responsible_solicitor"))
+        conditions += " and m.responsible_solicitor = '{0}'".format(filters.get("responsible_solicitor"))
 
-    # open_date, matter, client , status , practice_area , responsible_solicitor, close_date
-    sql = "select open_date, name, client , status , practice_area , responsible_solicitor, close_date ,\
- 				matter_information from `tabMatter` WHERE {0}"
-    data = frappe.db.sql(sql.format(conditions))
-    return  data
+    # Join tabEmployee to get employee_name
+    sql = """
+        SELECT 
+            m.open_date,
+            m.name,
+            m.client,
+            m.status,
+            m.practice_area,
+            e.employee_name AS solicitor_name,
+            m.close_date,
+            m.matter_information
+        FROM `tabMatter` m
+        LEFT JOIN `tabEmployee` e ON e.name = m.responsible_solicitor
+        WHERE {0}
+    """.format(conditions)
+
+    data = frappe.db.sql(sql, as_list=True)
+    return data
 
 
 def get_column():
-    # ["Link:Link/Accident:150", "Data:Data:200", "Currency:Currency:100", "Float:Float:100"]
     return [
-        _("Open Date")+":Data:100",
-        "Matter:Link/Matter:100",
-        "Client:Link/Customer:100",
-        "Status:Data:70",
-        "Practice Area:Link/Practice Area:100",
-        "Solicitor:Link/Employee:100",
+        _("Open Date") + ":Date:100",
+        "Matter:Link/Matter:150",
+        "Client:Link/Customer:150",
+        "Status:Data:100",
+        "Practice Area:Link/Practice Area:120",
+        "Solicitor:Data:150",   # now showing full name
         "Close Date:Date:100",
         "Information:Data:200",
     ]
