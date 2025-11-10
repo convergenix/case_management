@@ -84,8 +84,7 @@
    "allow_on_submit": 1,
    "fieldname": "end_time",
    "fieldtype": "Datetime",
-   "label": "End Time",
-   "read_only": 1
+   "label": "End Time"
   },
   {
    "allow_on_submit": 1,
@@ -124,7 +123,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2025-09-29 13:03:26.552253",
+ "modified": "2025-11-10 09:39:22.318650",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Time Tracking",
@@ -146,6 +145,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []
