@@ -120,15 +120,21 @@ def end_time_tracking(time_tracking):
 
 
 
-
 @frappe.whitelist()
 def stop_time_tracking_now(time_tracking):
     from frappe.utils import now_datetime, time_diff_in_hours
 
     doc = frappe.get_doc("Time Tracking", time_tracking)
-    end_time = now_datetime()
+
+    # ✔️ Do NOT override end_time if user has chosen one
+    if doc.end_time not in (None, "", " "):
+        end_time = doc.end_time
+    else:
+        end_time = now_datetime()
+
     doc.end_time = end_time
 
+    # Calculate worked hours
     if doc.start_time:
         hours = time_diff_in_hours(end_time, doc.start_time)
         doc.time = hours
@@ -138,6 +144,7 @@ def stop_time_tracking_now(time_tracking):
     doc.save(ignore_permissions=True)
     frappe.db.commit()
 
+    # Messaging part...
     client_name = "Unknown Client"
     matter_id = "Unknown Matter"
 
@@ -152,7 +159,6 @@ def stop_time_tracking_now(time_tracking):
         Revenue: {doc.revenue or 0}
     """
 
-    # ✅ Always email Charles only
     frappe.sendmail(
         recipients=["Charles.oyeshomo@odujinrinadefulu.com"],
         subject="Time Tracking Ended",
@@ -169,12 +175,18 @@ def stop_time_tracking_now(time_tracking):
 
 
 
+
 @frappe.whitelist()
 def finalize_time_tracking(time_tracking):
     doc = frappe.get_doc("Time Tracking", time_tracking)
 
-    doc.end_time = frappe.utils.now_datetime()
-    doc.time = frappe.utils.time_diff_in_hours(doc.end_time, doc.start_time)
+    # ✅ Only set end_time if not already provided
+    doc.end_time = doc.end_time if doc.end_time not in (None, "", " ") else frappe.utils.now_datetime()
+    
+    # Calculate total hours if start_time exists
+    if doc.start_time:
+        doc.time = frappe.utils.time_diff_in_hours(doc.end_time, doc.start_time)
+
     doc.status = "Time Tracking Ended"
     doc.calculate_revenue()
     doc.save(ignore_permissions=True)
@@ -206,6 +218,7 @@ def finalize_time_tracking(time_tracking):
     )
 
     return "Finalized"
+
 
 @frappe.whitelist()
 def pause_time_tracking(time_tracking):
