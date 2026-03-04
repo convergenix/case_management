@@ -5,210 +5,160 @@
 from __future__ import unicode_literals
 import frappe
 from frappe.model.document import Document
-from frappe.utils import time_diff_in_hours
-from frappe.utils import now
-from frappe.core.doctype.communication.email import make
-from frappe.utils import flt
+from frappe.utils import time_diff_in_hours, now_datetime, flt
 from erpnext.setup.utils import get_exchange_rate
 
+
 class TimeTracking(Document):
-	def on_submit(self):
-		if self.start_time:
-			self.status = "Time Tracking Started"
 
-		# calculate revenue if applicable
-		self.calculate_revenue()
+    def on_submit(self):
+        if self.start_time:
+            self.status = "Time Tracking Started"
+        self.calculate_revenue()
 
-	def before_save(self):
-		# recalc revenue on every save if billable
-		self.calculate_revenue()
-    
+    def before_save(self):
+        # Auto-stamp employee from the logged-in user if not already set
+        if not self.employee:
+            employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+            if employee:
+                self.employee = employee
 
-	def calculate_revenue(self):
-		"""Calculate revenue based on customer's billing currency.
-		If USD → store formatted in dollars and also convert to naira.
-		If NGN → store formatted in naira and skip conversion.
-		"""
-		if self.billing == "Billable" and self.time:
-			customer = self.matter_name  # assumes Time Tracking has a 'customer' field
+        self.calculate_revenue()
 
-			if customer:
-				# Fetch billing rate and currency from Billing Details
-				billing_rate, billing_currency = frappe.db.get_value(
-					"Billing Details",
-					{"customer": customer},
-					["billing_rate", "billing_currency"]
-				) or (0, "USD")
+    def calculate_revenue(self):
+        """Calculate revenue based on customer's billing currency.
+        USD   → format in dollars, convert to naira.
+        NGN   → format in naira, no conversion.
+        Other → convert to USD first, then to naira.
+        """
+        if self.billing == "Billable" and self.time:
+            customer = self.matter_name
 
-				if billing_rate:
-					if billing_currency == "USD":
-						# Revenue in USD
-						revenue_usd = round(float(billing_rate) * float(self.time), 2)
-						self.revenue = f"$ {revenue_usd:,.2f}"
+            if customer:
+                result = frappe.db.get_value(
+                    "Billing Details",
+                    {"customer": customer},
+                    ["billing_rate", "billing_currency"],
+                    as_dict=True
+                )
+                billing_rate     = flt(result.billing_rate)   if result else 0
+                billing_currency = result.billing_currency     if result else "USD"
 
-						# Convert to NGN
-						usd_to_ngn = get_exchange_rate("USD", "NGN")
-						self.revenue_in_naira = round(flt(revenue_usd) * flt(usd_to_ngn), 2)
-						self.exchange_rate_used = flt(usd_to_ngn)
+                if billing_rate:
+                    hours = flt(self.time)
 
-					elif billing_currency == "NGN":
-						# Revenue in NGN directly
-						revenue_ngn = round(float(billing_rate) * float(self.time), 2)
-						self.revenue = f"₦ {revenue_ngn:,.2f}"
+                    if billing_currency == "USD":
+                        revenue_usd             = round(billing_rate * hours, 2)
+                        self.revenue            = f"$ {revenue_usd:,.2f}"
+                        usd_to_ngn              = get_exchange_rate("USD", "NGN")
+                        self.revenue_in_naira   = round(revenue_usd * flt(usd_to_ngn), 2)
+                        self.exchange_rate_used = flt(usd_to_ngn)
 
-						# No conversion needed
-						self.revenue_in_naira = revenue_ngn
-						self.exchange_rate_used = 1
+                    elif billing_currency == "NGN":
+                        revenue_ngn             = round(billing_rate * hours, 2)
+                        self.revenue            = f"₦ {revenue_ngn:,.2f}"
+                        self.revenue_in_naira   = revenue_ngn
+                        self.exchange_rate_used = 1
 
-					else:
-						# Any other currency → first convert to USD
-						rate_to_usd = get_exchange_rate(billing_currency, "USD")
-						revenue_usd = round(float(billing_rate) * float(self.time) * flt(rate_to_usd), 2)
-						self.revenue = f"$ {revenue_usd:,.2f}"
+                    else:
+                        rate_to_usd             = get_exchange_rate(billing_currency, "USD")
+                        revenue_usd             = round(billing_rate * hours * flt(rate_to_usd), 2)
+                        self.revenue            = f"$ {revenue_usd:,.2f}"
+                        usd_to_ngn              = get_exchange_rate("USD", "NGN")
+                        self.revenue_in_naira   = round(revenue_usd * flt(usd_to_ngn), 2)
+                        self.exchange_rate_used = flt(usd_to_ngn)
+                    return
 
-						# Convert USD → NGN
-						usd_to_ngn = get_exchange_rate("USD", "NGN")
-						self.revenue_in_naira = round(flt(revenue_usd) * flt(usd_to_ngn), 2)
-						self.exchange_rate_used = flt(usd_to_ngn)
-
-				else:
-					self.revenue = "$ 0.00"
-					self.revenue_in_naira = 0
-			else:
-				self.revenue = "$ 0.00"
-				self.revenue_in_naira = 0
-		else:
-			self.revenue = "$ 0.00"
-			self.revenue_in_naira = 0
+        # Fallback
+        self.revenue          = "$ 0.00"
+        self.revenue_in_naira = 0
 
 
-@frappe.whitelist()
-def end_time_tracking(time_tracking):
-    doc = frappe.get_doc("Time Tracking", time_tracking)
-    doc.status = "Time Tracking Ended"
-    doc.calculate_revenue()
-    doc.save()
-    frappe.db.commit()
-
-    client_name = "Unknown Client"
-    matter_id = "Unknown Matter"
-
-    if doc.matter:
-        matter = frappe.get_doc("Matter", doc.matter)
-        matter_id = matter.name
-        client_name = matter.client or "Unknown Client"
-
-    message = f"""
-        Time Tracking for Matter <b>{matter_id}</b> has ended.<br>
-        Client: {client_name}
-    """
-
-    # ✅ Always email Charles only
-    frappe.sendmail(
-        recipients=["Charles.oyeshomo@odujinrinadefulu.com"],
-        subject="Time Tracking Ended",
-        message=message
-    )
-
-    # Optional: still show screen notification to whoever is logged in
-    frappe.publish_realtime(
-        event="msgprint",
-        message=f"⏰ Time Tracking Ended for Matter {matter_id} (Client: {client_name})"
-    )
-
-    return "Done"
-
-
-
-@frappe.whitelist()
-def stop_time_tracking_now(time_tracking):
-    from frappe.utils import now_datetime, time_diff_in_hours
-
-    doc = frappe.get_doc("Time Tracking", time_tracking)
-
-    # ✔️ Do NOT override end_time if user has chosen one
-    if doc.end_time not in (None, "", " "):
-        end_time = doc.end_time
-    else:
-        end_time = now_datetime()
-
-    doc.end_time = end_time
-
-    # Calculate worked hours
-    if doc.start_time:
-        hours = time_diff_in_hours(end_time, doc.start_time)
-        doc.time = hours
-
-    doc.status = "Time Tracking Ended"
-    doc.calculate_revenue()
-    doc.save(ignore_permissions=True)
-    frappe.db.commit()
-
-    # Messaging part...
-    client_name = "Unknown Client"
-    matter_id = "Unknown Matter"
-
-    if doc.matter:
-        matter = frappe.get_doc("Matter", doc.matter)
-        matter_id = matter.name
-        client_name = matter.client or "Unknown Client"
-
-    message = f"""
-        Time Tracking for Matter <b>{matter_id}</b> has been manually stopped.<br>
-        Client: {client_name}<br>
-        Revenue: {doc.revenue or 0}
-    """
-
-    frappe.sendmail(
-        recipients=["Charles.oyeshomo@odujinrinadefulu.com"],
-        subject="Time Tracking Ended",
-        message=message
-    )
-
-    frappe.publish_realtime(
-        event="msgprint",
-        message=f"⏰ Time Tracking Ended for Matter {matter_id} (Client: {client_name})"
-    )
-
-    return "Stopped"
-
-
-
-
+# ─── Whitelisted API methods ──────────────────────────────────────────────────
 
 @frappe.whitelist()
 def finalize_time_tracking(time_tracking):
     doc = frappe.get_doc("Time Tracking", time_tracking)
 
-    # ✅ Only set end_time if not already provided
-    doc.end_time = doc.end_time if doc.end_time not in (None, "", " ") else frappe.utils.now_datetime()
-    
-    # Calculate total hours if start_time exists
+    doc.end_time = (
+        doc.end_time
+        if doc.end_time not in (None, "", " ")
+        else now_datetime()
+    )
+
     if doc.start_time:
-        doc.time = frappe.utils.time_diff_in_hours(doc.end_time, doc.start_time)
+        doc.time = time_diff_in_hours(doc.end_time, doc.start_time)
 
     doc.status = "Time Tracking Ended"
     doc.calculate_revenue()
     doc.save(ignore_permissions=True)
     frappe.db.commit()
 
-    client_name = "Unknown"
-    matter_id = "Unknown"
+    _send_notification(doc)
+    return "Finalized"
+
+
+@frappe.whitelist()
+def stop_time_tracking_now(time_tracking):
+    doc = frappe.get_doc("Time Tracking", time_tracking)
+
+    doc.end_time = (
+        doc.end_time
+        if doc.end_time not in (None, "", " ")
+        else now_datetime()
+    )
+
+    if doc.start_time:
+        doc.time = time_diff_in_hours(doc.end_time, doc.start_time)
+
+    doc.status = "Time Tracking Ended"
+    doc.calculate_revenue()
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    _send_notification(doc)
+    return "Stopped"
+
+
+@frappe.whitelist()
+def end_time_tracking(time_tracking):
+    """Legacy endpoint — delegates to finalize."""
+    return finalize_time_tracking(time_tracking)
+
+
+@frappe.whitelist()
+def pause_time_tracking(time_tracking):
+    frappe.logger().info(f"Timer paused for {time_tracking} by {frappe.session.user}")
+    return "Paused"
+
+
+@frappe.whitelist()
+def continue_time_tracking(time_tracking):
+    frappe.logger().info(f"Timer resumed for {time_tracking} by {frappe.session.user}")
+    return "Continued"
+
+
+# ─── Internal helper ──────────────────────────────────────────────────────────
+
+def _send_notification(doc):
+    client_name = "Unknown Client"
+    matter_id   = "Unknown Matter"
 
     if doc.matter:
-        matter = frappe.get_doc("Matter", doc.matter)
-        matter_id = matter.name
-        client_name = matter.client or "Unknown"
+        matter      = frappe.get_doc("Matter", doc.matter)
+        matter_id   = matter.name
+        client_name = matter.client or "Unknown Client"
 
     message = f"""
         Time Tracking for Matter <b>{matter_id}</b> has ended.<br>
-        Client: {client_name}
+        Client: {client_name}<br>
+        Employee: {doc.employee_name or doc.employee or "N/A"}<br>
+        Revenue: {doc.revenue or "$ 0.00"}
     """
 
-    # ✅ Always email Charles only
     frappe.sendmail(
         recipients=["Charles.oyeshomo@odujinrinadefulu.com"],
-        subject="Time Tracking Ended",
+        subject=f"Time Tracking Ended — {matter_id}",
         message=message
     )
 
@@ -216,24 +166,3 @@ def finalize_time_tracking(time_tracking):
         event="msgprint",
         message=f"⏰ Time Tracking Ended for Matter {matter_id} (Client: {client_name})"
     )
-
-    return "Finalized"
-
-
-@frappe.whitelist()
-def pause_time_tracking(time_tracking):
-    """Mark timer as paused logically (no data mutation)."""
-    doc = frappe.get_doc("Time Tracking", time_tracking)
-    # just log that it was paused
-    frappe.logger().info(f"Timer paused for {time_tracking}")
-    return "Paused"
-
-
-@frappe.whitelist()
-def continue_time_tracking(time_tracking):
-    """Mark timer as resumed logically (no data mutation)."""
-    doc = frappe.get_doc("Time Tracking", time_tracking)
-    frappe.logger().info(f"Timer continued for {time_tracking}")
-    return "Continued"
-
-

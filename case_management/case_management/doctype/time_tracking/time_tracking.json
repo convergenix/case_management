@@ -7,19 +7,25 @@
  "engine": "InnoDB",
  "field_order": [
   "timer",
+  "section_break_xcnf",
   "matter",
   "matter_name",
   "billing",
+  "column_break_mwee",
   "date",
   "start_time",
   "end_time",
   "time",
+  "column_break_pfbi",
+  "employee",
+  "employee_name",
   "status",
+  "section_break_kiti",
   "notes",
-  "amended_from",
   "revenue_tab",
   "revenue",
-  "revenue_in_naira"
+  "revenue_in_naira",
+  "amended_from"
  ],
  "fields": [
   {
@@ -58,15 +64,6 @@
    "in_list_view": 1,
    "label": "Activity",
    "reqd": 1
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Time Tracking",
-   "print_hide": 1,
-   "read_only": 1
   },
   {
    "fetch_from": "matter.client",
@@ -119,15 +116,55 @@
    "fieldtype": "Currency",
    "label": "Revenue in Naira",
    "read_only": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_xcnf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_mwee",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_pfbi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_kiti",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Time Tracking",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-10 09:39:22.318650",
+ "modified": "2026-03-04 11:30:50.147348",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Time Tracking",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
