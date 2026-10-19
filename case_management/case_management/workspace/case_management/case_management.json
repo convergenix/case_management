@@ -1,0 +1,65 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"cm-shortcuts-header\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Matter Management</b></span>\",\"col\":12}},{\"id\":\"cm-sc-matter\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Matter\",\"col\":3}},{\"id\":\"cm-sc-matter-activity\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Matter Activity\",\"col\":3}},{\"id\":\"cm-sc-checklist\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Matter Custom Check List\",\"col\":3}},{\"id\":\"cm-sc-practice-area\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Practice Area\",\"col\":3}},{\"id\":\"cm-intake-header\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Intake &amp; Conflicts</b></span>\",\"col\":12}},{\"id\":\"cm-sc-legal-party\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Legal Party\",\"col\":3}},{\"id\":\"cm-sc-intake\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Intake\",\"col\":3}},{\"id\":\"cm-sc-conflict-review\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Conflict Review\",\"col\":3}}]",
+ "creation": "2021-03-20 23:06:18.452903",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Case Management",
+ "links": [],
+ "modified": "2026-10-19 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Case Management",
+ "name": "Case Management",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "#7575ff",
+   "icon": "fa fa-gavel",
+   "label": "Matter",
+   "link_to": "Matter",
+   "stats_filter": "{}",
+   "type": "DocType"
+  },
+  {
+   "label": "Matter Activity",
+   "link_to": "Matter Activity",
+   "type": "DocType"
+  },
+  {
+   "label": "Matter Custom Check List",
+   "link_to": "Matter Custom Check List",
+   "type": "DocType"
+  },
+  {
+   "label": "Practice Area",
+   "link_to": "Practice Area",
+   "type": "DocType"
+  },
+  {
+   "label": "Legal Party",
+   "link_to": "Legal Party",
+   "type": "DocType"
+  },
+  {
+   "label": "Intake",
+   "link_to": "Intake",
+   "type": "DocType"
+  },
+  {
+   "label": "Conflict Review",
+   "link_to": "Conflict Review",
+   "type": "DocType"
+  }
+ ],
+ "title": "Case Management"
+}
