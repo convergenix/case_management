@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "autoname": "LP-.#####",
+ "creation": "2026-10-19 00:00:00.000000",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "party_name",
+  "party_type",
+  "identifier",
+  "column_break_identity",
+  "normalized_name",
+  "linked_contact",
+  "linked_customer",
+  "section_break_aliases",
+  "aliases",
+  "section_break_related",
+  "related_parties",
+  "section_break_effective",
+  "effective_from",
+  "effective_to"
+ ],
+ "fields": [
+  {
+   "fieldname": "party_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Party Name",
+   "reqd": 1
+  },
+  {
+   "default": "Organization",
+   "fieldname": "party_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Party Type",
+   "options": "Person\nOrganization",
+   "reqd": 1
+  },
+  {
+   "fieldname": "identifier",
+   "fieldtype": "Data",
+   "label": "Identifier (Reg. No. / BVN / Other Stable ID)"
+  },
+  {
+   "fieldname": "column_break_identity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "normalized_name",
+   "fieldtype": "Data",
+   "label": "Normalized Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "linked_contact",
+   "fieldtype": "Link",
+   "label": "Linked Contact",
+   "options": "Contact"
+  },
+  {
+   "description": "Set only when this party becomes a billing client. A prospect or adverse party must not be linked here automatically.",
+   "fieldname": "linked_customer",
+   "fieldtype": "Link",
+   "label": "Linked Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "section_break_aliases",
+   "fieldtype": "Section Break",
+   "label": "Aliases"
+  },
+  {
+   "description": "One alias per line. Used for exact/normalized-name conflict matching.",
+   "fieldname": "aliases",
+   "fieldtype": "Small Text",
+   "label": "Known Aliases"
+  },
+  {
+   "fieldname": "section_break_related",
+   "fieldtype": "Section Break",
+   "label": "Related Parties"
+  },
+  {
+   "fieldname": "related_parties",
+   "fieldtype": "Table",
+   "label": "Related Parties",
+   "options": "Legal Party Relation"
+  },
+  {
+   "fieldname": "section_break_effective",
+   "fieldtype": "Section Break",
+   "label": "Effective Dates"
+  },
+  {
+   "fieldname": "effective_from",
+   "fieldtype": "Date",
+   "label": "Effective From"
+  },
+  {
+   "fieldname": "effective_to",
+   "fieldtype": "Date",
+   "label": "Effective To"
+  }
+ ],
+ "is_submittable": 0,
+ "links": [],
+ "modified": "2026-10-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Case Management",
+ "name": "Legal Party",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
