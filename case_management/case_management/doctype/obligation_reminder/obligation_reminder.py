@@ -62,6 +62,8 @@ def generate_default_reminders(doc, method=None):
 		}).insert(ignore_permissions=True)
 
 	frappe.db.set_value("Legal Obligation", obligation_name, "last_reminder_sync_date", obligation.due_date, update_modified=False)
+	if hasattr(doc, "last_reminder_sync_date"):
+		doc.last_reminder_sync_date = obligation.due_date
 
 
 @frappe.whitelist()

@@ -113,3 +113,37 @@ class TestObligationReminderReschedule(FrappeTestCase):
 		for r in new_reminders:
 			self.addCleanup(frappe.delete_doc, "Obligation Reminder", r, force=True)
 		self.assertEqual(len(new_reminders), 2)
+
+	def test_unrelated_edit_after_reschedule_does_not_create_duplicate_reminders(self):
+		obligation = self._make_active_obligation()
+		original_reminders = frappe.get_all(
+			"Obligation Reminder", filters={"obligation": obligation.name}, pluck="name"
+		)
+		for r in original_reminders:
+			self.addCleanup(frappe.delete_doc, "Obligation Reminder", r, force=True)
+
+		old_due_date = obligation.due_date
+		obligation.due_date = add_days(old_due_date, 10)
+		obligation.reschedule_reason = "Hearing adjourned"
+		obligation.save()
+
+		post_reschedule_reminders = frappe.get_all(
+			"Obligation Reminder",
+			filters={"obligation": obligation.name, "status": "Queued"},
+			pluck="name",
+		)
+		self.assertEqual(len(post_reschedule_reminders), 2)
+
+		obligation.source_reference = "Updated source reference"
+		obligation.save()
+
+		final_reminders = frappe.get_all(
+			"Obligation Reminder",
+			filters={"obligation": obligation.name, "status": "Queued"},
+			pluck="name",
+		)
+		for r in final_reminders:
+			self.addCleanup(frappe.delete_doc, "Obligation Reminder", r, force=True)
+
+		self.assertEqual(len(final_reminders), 2)
+		self.assertEqual(set(post_reschedule_reminders), set(final_reminders))
