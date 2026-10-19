@@ -5,12 +5,17 @@ from __future__ import unicode_literals
 from frappe import _
 
 import frappe
+from case_management.case_management.doctype.matter.matter import get_matter_access_condition
 
 def execute(filters=None):
     return get_column(), get_data(filters)
 
 def get_data(filters):
     conditions = "(1=1) "
+    access_condition = get_matter_access_condition("m.name")
+    if access_condition:
+        conditions += " and " + access_condition
+
     if filters.get('opened_from') and filters.get('opened_to'):
         conditions += " and m.open_date BETWEEN '{0}' and '{1}'".format(
             filters.get("opened_from"), filters.get('opened_to'))

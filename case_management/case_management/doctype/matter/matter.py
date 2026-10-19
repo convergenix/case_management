@@ -140,6 +140,23 @@ def get_permission_query_conditions(user=None):
     ))""".format(user=frappe.db.escape(user))
 
 
+def get_matter_access_condition(matter_column, user=None):
+    """SQL fragment limiting a Matter-name column to the matters `user` may see.
+
+    `permission_query_conditions` only reaches get_list/get_all and desk list
+    views. Raw SQL — the Matter calendar and the Script Reports — has to apply
+    the same restriction itself, through here. The empty/null branch keeps rows
+    whose Matter link is blank (unbilled time entries, for instance) in reports
+    that outer-join Matter.
+    """
+    condition = get_permission_query_conditions(user)
+    if not condition:
+        return ""
+    return "(ifnull({column}, '') = '' or {column} in (select `tabMatter`.name from `tabMatter` where {condition}))".format(
+        column=matter_column, condition=condition
+    )
+
+
 def has_permission(doc, user=None, permission_type=None):
     if not user:
         user = frappe.session.user
@@ -172,9 +189,13 @@ def get_events(start, end, filters=None):
     from frappe.desk.calendar import get_event_conditions
     conditions = get_event_conditions("Matter", filters)
 
+    access_condition = get_permission_query_conditions()
+    if access_condition:
+        conditions += " and " + access_condition
+
     data = frappe.db.sql("""select name,CONCAT(name," ",client) as title , open_date,
-		close_date, status from `tabMatter` where 
-		((ifnull(open_date, '0000-00-00') != '0000-00-00')  and (open_date <= %(end)s and open_date >= %(start)s)) 
+		close_date, status from `tabMatter` where
+		((ifnull(open_date, '0000-00-00') != '0000-00-00')  and (open_date <= %(end)s and open_date >= %(start)s))
 		{conditions}
 		""".format(conditions=conditions), {
         "start": start,

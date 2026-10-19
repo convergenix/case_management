@@ -64,6 +64,7 @@
 from __future__ import unicode_literals
 from frappe import _
 import frappe
+from case_management.case_management.doctype.matter.matter import get_matter_access_condition
 
 def execute(filters=None):
     return get_columns(), get_data(filters)
@@ -71,6 +72,10 @@ def execute(filters=None):
 def get_data(filters):
     conditions = []
     values = {}
+
+    access_condition = get_matter_access_condition("m.name")
+    if access_condition:
+        conditions.append(access_condition)
 
     if filters.get('opened_from') and filters.get('opened_to'):
         conditions.append("m.open_date BETWEEN %(opened_from)s AND %(opened_to)s")

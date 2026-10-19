@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from case_management.case_management.doctype.matter.matter import get_matter_access_condition
 
 def execute(filters=None):
     columns = get_columns()
@@ -26,6 +27,10 @@ def get_columns():
 def get_data(filters):
     conditions = "tt.docstatus = 1"
     values = {}
+
+    access_condition = get_matter_access_condition("tt.matter")
+    if access_condition:
+        conditions += " AND " + access_condition
 
     if filters.get("from_date"):
         conditions += " AND tt.start_time >= %(from_date)s"

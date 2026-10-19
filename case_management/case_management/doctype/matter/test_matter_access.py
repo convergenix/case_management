@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import now_datetime, nowdate
+from frappe.utils import add_days, now_datetime, nowdate
 
 
 class TestMatterAccessControl(FrappeTestCase):
@@ -82,6 +82,92 @@ class TestMatterAccessControl(FrappeTestCase):
 		intake.status = "Approved"
 		intake.save()
 		return intake
+
+	def _make_matter_owned_by(self, user, label):
+		# Mirrors the ownership dance explained in
+		# test_restricted_matter_excluded_from_list_for_unrelated_user: the user
+		# opens the matter themselves while it is still unrestricted, so the only
+		# thing that changes between the "before" and "after" assertions is
+		# is_restricted.
+		intake = self._make_approved_intake(label)
+		customer = self._make_customer(label)
+		frappe.set_user(user)
+		try:
+			matter = frappe.get_doc({
+				"doctype": "Matter",
+				"client": customer.name,
+				"intake": intake.name,
+				"status": "Open",
+				"is_restricted": 0,
+				**self._matter_base_fields(label),
+			}).insert()
+		finally:
+			frappe.set_user("Administrator")
+		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
+		return matter
+
+	def _make_outsider(self, email):
+		if not frappe.db.exists("User", email):
+			frappe.get_doc({
+				"doctype": "User",
+				"email": email,
+				"first_name": "Outsider",
+				"send_welcome_email": 0,
+				"roles": [{"role": "Lawyer Manager"}],
+			}).insert(ignore_permissions=True)
+			self.addCleanup(frappe.delete_doc, "User", email, force=True)
+		return email
+
+	def test_restricted_matter_excluded_from_calendar_events(self):
+		from case_management.case_management.doctype.matter.matter import get_events
+
+		outsider = self._make_outsider("test_calendar_outsider@example.com")
+		matter = self._make_matter_owned_by(outsider, "Restricted Calendar")
+		start = add_days(nowdate(), -1)
+		end = add_days(nowdate(), 1)
+
+		frappe.set_user(outsider)
+		try:
+			before = [row.name for row in get_events(start, end)]
+			self.assertIn(matter.name, before)
+		finally:
+			frappe.set_user("Administrator")
+
+		matter.reload()
+		matter.is_restricted = 1
+		matter.save()
+
+		frappe.set_user(outsider)
+		try:
+			after = [row.name for row in get_events(start, end)]
+			self.assertNotIn(matter.name, after)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_restricted_matter_excluded_from_matter_status_report(self):
+		from case_management.case_management.report.matter_status_report.matter_status_report import execute
+
+		outsider = self._make_outsider("test_report_outsider@example.com")
+		matter = self._make_matter_owned_by(outsider, "Restricted Report")
+		filters = {"opened_from": add_days(nowdate(), -1), "opened_to": add_days(nowdate(), 1)}
+
+		frappe.set_user(outsider)
+		try:
+			before = [row[1] for row in execute(filters)[1]]
+			self.assertIn(matter.name, before)
+		finally:
+			frappe.set_user("Administrator")
+
+		matter.reload()
+		matter.is_restricted = 1
+		matter.save()
+
+		frappe.set_user(outsider)
+		try:
+			after = [row[1] for row in execute(filters)[1]]
+			self.assertNotIn(matter.name, after)
+		finally:
+			frappe.set_user("Administrator")
 
 	def test_restricted_matter_excluded_from_list_for_unrelated_user(self):
 		# Matter's own pre-existing DocPerm for "Lawyer Manager" has if_owner=1
