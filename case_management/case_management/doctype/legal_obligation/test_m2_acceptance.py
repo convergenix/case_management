@@ -6,6 +6,11 @@ from frappe.utils import add_days, add_to_date, nowdate, now_datetime
 
 
 class TestM2Acceptance(FrappeTestCase):
+	def tearDown(self):
+		frappe.db.set_value("Scheduler Heartbeat", "Scheduler Heartbeat", "last_heartbeat", None)
+		frappe.db.set_value("Scheduler Heartbeat", "Scheduler Heartbeat", "last_outage_detected", None)
+		frappe.db.commit()
+
 	def _make_active_obligation(self, due_date=None):
 		customer = frappe.get_doc({
 			"doctype": "Customer", "customer_name": "M2 Acceptance Customer", "customer_type": "Company",
@@ -97,6 +102,7 @@ class TestM2Acceptance(FrappeTestCase):
 		frappe.db.set_value("Obligation Reminder", overdue_reminder, "scheduled_for", add_to_date(now_datetime(), hours=-3))
 
 		already_delivered = reminders[1]
+		frappe.db.set_value("Obligation Reminder", already_delivered, "scheduled_for", add_to_date(now_datetime(), hours=-1))
 		frappe.db.set_value("Obligation Reminder", already_delivered, "status", "Delivered")
 		frappe.db.set_value("Obligation Reminder", already_delivered, "delivered_at", add_to_date(now_datetime(), hours=-1))
 		delivered_at_before_recovery = frappe.db.get_value("Obligation Reminder", already_delivered, "delivered_at")
@@ -118,10 +124,6 @@ class TestM2Acceptance(FrappeTestCase):
 			str(frappe.db.get_value("Obligation Reminder", already_delivered, "delivered_at")),
 			str(delivered_at_before_recovery),
 		)
-
-		frappe.db.set_value("Scheduler Heartbeat", "Scheduler Heartbeat", "last_heartbeat", None)
-		frappe.db.set_value("Scheduler Heartbeat", "Scheduler Heartbeat", "last_outage_detected", None)
-		frappe.db.commit()
 
 	def test_completing_a_reminder_does_not_complete_the_obligation(self):
 		obligation = self._make_active_obligation()
