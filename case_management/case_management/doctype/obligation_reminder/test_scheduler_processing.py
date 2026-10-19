@@ -100,3 +100,23 @@ class TestSchedulerProcessing(FrappeTestCase):
 			str(frappe.db.get_value("Obligation Reminder", reminder.name, "delivered_at")),
 			str(original_delivered_at),
 		)
+
+	def test_process_due_reminders_sets_is_overdue_when_significantly_late(self):
+		obligation = self._make_obligation_stub()
+		overdue_reminder = self._make_reminder(obligation.name, add_to_date(now_datetime(), minutes=-90))
+
+		from case_management.case_management.doctype.obligation_reminder.obligation_reminder import process_due_reminders
+		process_due_reminders()
+
+		self.assertEqual(frappe.db.get_value("Obligation Reminder", overdue_reminder.name, "status"), "Delivered")
+		self.assertEqual(frappe.db.get_value("Obligation Reminder", overdue_reminder.name, "is_overdue"), 1)
+
+	def test_process_due_reminders_does_not_set_is_overdue_when_slightly_late(self):
+		obligation = self._make_obligation_stub()
+		slightly_late_reminder = self._make_reminder(obligation.name, add_to_date(now_datetime(), minutes=-10))
+
+		from case_management.case_management.doctype.obligation_reminder.obligation_reminder import process_due_reminders
+		process_due_reminders()
+
+		self.assertEqual(frappe.db.get_value("Obligation Reminder", slightly_late_reminder.name, "status"), "Delivered")
+		self.assertEqual(frappe.db.get_value("Obligation Reminder", slightly_late_reminder.name, "is_overdue"), 0)
