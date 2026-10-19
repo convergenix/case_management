@@ -142,6 +142,24 @@ class TestObligationReminder(FrappeTestCase):
 		self.assertEqual(result, reminders[0])
 		self.assertEqual(frappe.db.get_value("Obligation Reminder", reminders[0], "status"), "Acknowledged")
 
+	def test_completing_an_obligation_supersedes_its_queued_reminders(self):
+		obligation = self._make_active_obligation()
+		reminders = frappe.get_all(
+			"Obligation Reminder",
+			filters={"obligation": obligation.name, "status": "Queued"},
+			pluck="name",
+		)
+		for r in reminders:
+			self.addCleanup(frappe.delete_doc, "Obligation Reminder", r, force=True)
+		self.assertEqual(len(reminders), 2)
+
+		obligation.status = "Completed"
+		obligation.completion_evidence = "Filed stamped copy attached"
+		obligation.save()
+
+		for r in reminders:
+			self.assertEqual(frappe.db.get_value("Obligation Reminder", r, "status"), "Superseded")
+
 	def test_only_the_recipient_can_acknowledge_a_reminder(self):
 		outsider = self._make_plain_user("reminder_ack_outsider@example.com")
 		obligation = self._make_active_obligation()

@@ -36,6 +36,14 @@ def generate_default_reminders(doc, method=None):
 	obligation_name = doc.name if hasattr(doc, 'name') else doc
 	obligation = frappe.get_doc("Legal Obligation", obligation_name)
 
+	if obligation.status in ("Completed", "Cancelled", "Superseded"):
+		frappe.db.sql(
+			"""update `tabObligation Reminder` set status='Superseded'
+			   where obligation=%(obligation)s and status='Queued'""",
+			{"obligation": obligation_name},
+		)
+		return
+
 	if obligation.status != "Active":
 		return
 
