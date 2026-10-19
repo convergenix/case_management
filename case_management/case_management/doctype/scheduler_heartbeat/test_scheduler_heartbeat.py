@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_to_date, now_datetime, nowdate
+from frappe.utils import add_to_date, get_datetime, now_datetime, nowdate
 
 
 class TestSchedulerHeartbeat(FrappeTestCase):
@@ -85,6 +85,17 @@ class TestSchedulerHeartbeat(FrappeTestCase):
 		from case_management.case_management.doctype.scheduler_heartbeat.scheduler_heartbeat import check_for_outage
 		outage_detected = check_for_outage(expected_interval_minutes=10, grace_minutes=20)
 		self.assertFalse(outage_detected)
+
+	def test_heartbeat_tick_detects_outage_against_old_heartbeat_then_refreshes_it(self):
+		stale = add_to_date(now_datetime(), minutes=-45)
+		frappe.db.set_value("Scheduler Heartbeat", "Scheduler Heartbeat", "last_heartbeat", stale)
+		frappe.db.commit()
+
+		from case_management.case_management.doctype.scheduler_heartbeat.scheduler_heartbeat import heartbeat_tick
+		self.assertTrue(heartbeat_tick(expected_interval_minutes=10, grace_minutes=20))
+
+		refreshed = frappe.db.get_single_value("Scheduler Heartbeat", "last_heartbeat")
+		self.assertGreater(get_datetime(refreshed), get_datetime(stale))
 
 	def test_check_for_outage_processes_backlog_on_recovery(self):
 		matter = self._make_matter()

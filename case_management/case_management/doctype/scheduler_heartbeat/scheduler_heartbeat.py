@@ -30,3 +30,13 @@ def check_for_outage(expected_interval_minutes=10, grace_minutes=20):
 	process_due_reminders(mark_overdue_after_minutes=expected_interval_minutes)
 
 	return True
+
+
+def heartbeat_tick(expected_interval_minutes=10, grace_minutes=20):
+	"""Combined scheduler entry point: check for an outage against the
+	PREVIOUS heartbeat before recording a new one, so the two operations
+	can never race against each other as separate cron jobs would.
+	"""
+	outage_detected = check_for_outage(expected_interval_minutes, grace_minutes)
+	record_heartbeat()
+	return outage_detected

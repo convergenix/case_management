@@ -113,8 +113,8 @@ class TestM2Acceptance(FrappeTestCase):
 		)
 		frappe.db.commit()
 
-		from case_management.case_management.doctype.scheduler_heartbeat.scheduler_heartbeat import check_for_outage
-		outage_detected = check_for_outage(expected_interval_minutes=10, grace_minutes=20)
+		from case_management.case_management.doctype.scheduler_heartbeat.scheduler_heartbeat import heartbeat_tick
+		outage_detected = heartbeat_tick(expected_interval_minutes=10, grace_minutes=20)
 		self.assertTrue(outage_detected)
 
 		self.assertEqual(frappe.db.get_value("Obligation Reminder", overdue_reminder, "status"), "Delivered")
