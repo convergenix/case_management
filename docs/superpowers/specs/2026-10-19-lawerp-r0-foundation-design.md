@@ -74,6 +74,12 @@ Reuse Frappe's existing permission layers rather than building parallel infrastr
 
 Acceptance for M1 includes: an unauthorized user sees neither content nor confidential titles; a restricted-match conflict search reaches the designated reviewer without disclosing matter details to the requester; a direct API or import cannot bypass the intake-approval gate.
 
+### Known limitation: the ALLOW side of the wall is unreachable on this bench
+
+`Matter`'s pre-existing base `DocPerm` rows make the ethical wall's *allow* branch structurally unreachable, and M1 does not change them. `Lawyer Manager` has `if_owner: 1`, so that role can only read Matters the user personally created; `Partners` has unrestricted read but is `disabled` in this bench's `Role` data, and `User.validate()` silently strips disabled roles from any user it is assigned to. Frappe **ANDs** role-level DocPerm conditions with `permission_query_conditions`, so a non-owning `Lawyer Manager` who sits on a matter's `Matter Team Item` team is excluded by the base role permission before `is_restricted` or team membership is ever consulted.
+
+The consequence is asymmetric: the DENY side works correctly — a restricted matter is hidden from users who should not see it, through list views, the calendar, Script Reports and document reads alike — but the team-membership and responsible-solicitor allowances M1 builds can never actually grant access to a Matter a user did not create. Closing this requires either removing `if_owner` from `Lawyer Manager`'s DocPerm or enabling the `Partners` role (and deciding who holds it). Both are product/security decisions about base permission configuration with blast radius across the whole app, so they are deliberately left for a human to make rather than being folded into an implementation or fix wave. `test_known_limitation_team_member_without_ownership_cannot_see_matter` in `test_matter_access.py` pins the current behavior so the gap stays visible and is not mistaken for a regression.
+
 ## M2 — Data Model
 
 | Doctype | Purpose | Key fields / invariants |

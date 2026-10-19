@@ -156,6 +156,14 @@ class Matter(Document):
             frappe.throw("""Please select a Custom Field Preset. """)
 
 
+# Known limitation: Frappe ANDs role-level DocPerm conditions with
+# permission_query_conditions, and Matter's base DocPerm for "Lawyer Manager"
+# carries if_owner=1 while the only unrestricted-read role ("Partners") is
+# disabled. A team member who does not personally own a matter is therefore
+# filtered out before the allowances below are consulted, so the DENY side of
+# the ethical wall holds but the ALLOW side cannot currently grant anyone
+# access to a matter they did not create. See the M1 access-control section of
+# docs/superpowers/specs/2026-10-19-lawerp-r0-foundation-design.md.
 def get_permission_query_conditions(user=None):
     if not user:
         user = frappe.session.user
@@ -187,6 +195,8 @@ def get_matter_access_condition(matter_column, user=None):
     )
 
 
+# Subject to the same base-DocPerm limitation documented above
+# get_permission_query_conditions.
 def has_permission(doc, user=None, permission_type=None):
     if not user:
         user = frappe.session.user

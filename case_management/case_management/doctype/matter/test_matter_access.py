@@ -118,20 +118,101 @@ class TestMatterAccessControl(FrappeTestCase):
 			self.addCleanup(frappe.delete_doc, "User", email, force=True)
 		return email
 
-	def test_responsible_solicitor_can_see_their_own_restricted_matter(self):
-		solicitor_user = self._make_outsider("test_responsible_solicitor@example.com")
+	def _make_employee_for(self, user, label):
+		existing = frappe.db.get_value("Employee", {"user_id": user}, "name")
+		if existing:
+			return frappe.get_doc("Employee", existing)
 		template = frappe.get_doc("Employee", self._get_employee())
 		employee = frappe.get_doc({
 			"doctype": "Employee",
-			"employee_name": "Responsible Solicitor Under Test",
+			"employee_name": label,
 			"status": "Active",
-			"user_id": solicitor_user,
+			"user_id": user,
 			"company": template.company,
 			"date_of_joining": template.date_of_joining,
 			"date_of_birth": template.date_of_birth,
 			"gender": template.gender,
 		}).insert(ignore_mandatory=True)
 		self.addCleanup(frappe.delete_doc, "Employee", employee.name, force=True)
+		return employee
+
+	def test_known_limitation_team_member_without_ownership_cannot_see_matter(self):
+		"""Documented, known gap — not a regression.
+
+		Frappe ANDs role-level DocPerm conditions with
+		permission_query_conditions. Matter's pre-existing DocPerm for "Lawyer
+		Manager" carries if_owner=1, and the only unrestricted-read role,
+		"Partners", is disabled in this bench's Role data (User.validate()
+		strips disabled roles). So a user who is on a matter's team but did not
+		personally create it is filtered out by the base role permission before
+		is_restricted or team membership is ever consulted, which makes the
+		Matter Team Item allowance this branch built unreachable in practice.
+
+		The DENY side of the ethical wall works; the ALLOW side does not.
+		Closing it means removing if_owner from Lawyer Manager's DocPerm or
+		enabling the Partners role — base permission configuration with
+		app-wide blast radius, left for a human decision. See the M1
+		access-control section of the R0 foundation design spec.
+		"""
+		team_user = self._make_outsider("test_team_member_non_owner@example.com")
+		team_employee = self._make_employee_for(team_user, "Team Member Under Test")
+
+		intake = self._make_approved_intake("Team Allowance")
+		customer = self._make_customer("Team Allowance")
+		base_fields = self._matter_base_fields("Team Allowance")
+		# Must not be the team member, or the responsible_solicitor path would
+		# grant the access this test is showing to be unreachable.
+		base_fields["responsible_solicitor"] = frappe.db.get_value(
+			"Employee", {"name": ["!=", team_employee.name]}, "name"
+		)
+		matter = frappe.get_doc({
+			"doctype": "Matter",
+			"client": customer.name,
+			"intake": intake.name,
+			"status": "Open",
+			"is_restricted": 1,
+			"legal_team": [{
+				"employee": team_employee.name,
+				"employee_type": frappe.db.get_value("Designation", {}, "name"),
+			}],
+			**base_fields,
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
+		self.assertNotEqual(matter.owner, team_user)
+		self.assertNotEqual(matter.responsible_solicitor, team_employee.name)
+
+		open_intake = self._make_approved_intake("Team Allowance Control")
+		open_customer = self._make_customer("Team Allowance Control")
+		control_fields = self._matter_base_fields("Team Allowance Control")
+		control_fields["responsible_solicitor"] = base_fields["responsible_solicitor"]
+		unrestricted = frappe.get_doc({
+			"doctype": "Matter",
+			"client": open_customer.name,
+			"intake": open_intake.name,
+			"status": "Open",
+			"is_restricted": 0,
+			**control_fields,
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Matter", unrestricted.name, force=True)
+
+		from case_management.case_management.doctype.matter.matter import has_permission
+		self.assertTrue(has_permission(matter, user=team_user))
+
+		frappe.set_user(team_user)
+		try:
+			visible = frappe.get_list(
+				"Matter", filters={"name": ["in", [matter.name, unrestricted.name]]}, pluck="name"
+			)
+		finally:
+			frappe.set_user("Administrator")
+
+		self.assertNotIn(matter.name, visible)
+		# Not caused by is_restricted: a matter they do not own is invisible either way.
+		self.assertNotIn(unrestricted.name, visible)
+
+	def test_responsible_solicitor_can_see_their_own_restricted_matter(self):
+		solicitor_user = self._make_outsider("test_responsible_solicitor@example.com")
+		employee = self._make_employee_for(solicitor_user, "Responsible Solicitor Under Test")
 
 		intake = self._make_approved_intake("Solicitor Access")
 		customer = self._make_customer("Solicitor Access")
