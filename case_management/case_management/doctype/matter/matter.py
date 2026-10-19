@@ -21,12 +21,40 @@ TRANSITIONS = {
 REOPEN_ROLES = {"Partner", "Managing Partner", "System Manager"}
 
 
+def _state_log_fingerprint(row):
+    # changed_at arrives as a datetime when loaded from the DB and as a string
+    # when it comes off an API payload, so it is normalized before comparison.
+    return (
+        row.previous_state or "",
+        row.new_state or "",
+        row.changed_by or "",
+        frappe.utils.get_datetime(row.changed_at) if row.changed_at else None,
+        row.reason or "",
+    )
+
+
 class Matter(Document):
     def validate(self):
         if self.is_new():
             self._validate_intake_gate()
         else:
+            self._enforce_append_only_state_log()
             self._enforce_state_transition()
+
+    def _enforce_append_only_state_log(self):
+        # read_only on the Table field is a UI restriction; without this an API
+        # caller with Matter write access could rewrite the transition history.
+        previous = self.get_doc_before_save()
+        if not previous:
+            return
+
+        current_rows = {row.name: row for row in self.state_log if row.name}
+        for old_row in previous.state_log:
+            current_row = current_rows.get(old_row.name)
+            if not current_row:
+                frappe.throw("The Matter state history is append-only — existing entries cannot be removed.")
+            if _state_log_fingerprint(current_row) != _state_log_fingerprint(old_row):
+                frappe.throw("The Matter state history is append-only — existing entries cannot be edited.")
 
     def _validate_intake_gate(self):
         if not self.intake:

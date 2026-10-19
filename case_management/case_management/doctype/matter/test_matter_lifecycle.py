@@ -273,6 +273,25 @@ class TestMatterLifecycle(FrappeTestCase):
 		self.assertEqual(matter.state_log[-1].new_state, "Active")
 		self.assertEqual(matter.state_log[-1].reason, "Client reinstated the engagement.")
 
+	def test_existing_state_log_rows_cannot_be_edited_or_removed(self):
+		matter = self._make_matter("Append Only Log")
+		matter.status = "Active"
+		matter.save()
+		matter.reload()
+		self.assertEqual(len(matter.state_log), 2)
+
+		matter.state_log[0].new_state = "Archived"
+		with self.assertRaises(frappe.ValidationError):
+			matter.save()
+
+		matter.reload()
+		matter.state_log.pop(0)
+		with self.assertRaises(frappe.ValidationError):
+			matter.save()
+
+		matter.reload()
+		self.assertEqual([row.new_state for row in matter.state_log], ["Open", "Active"])
+
 	def test_closed_matter_can_be_archived(self):
 		matter = self._make_matter("Archive Flow")
 		matter.status = "Active"
