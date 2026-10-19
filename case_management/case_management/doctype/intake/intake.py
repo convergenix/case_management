@@ -54,7 +54,7 @@ class Intake(Document):
 		return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 	def _validate_conflict_clearance(self):
-		if not frappe.db.table_exists("tabConflict Review"):
+		if not frappe.db.table_exists("Conflict Review"):
 			frappe.throw(
 				"Intake cannot be Approved without a Conflict Review decided Clear or Waiver Granted."
 			)
