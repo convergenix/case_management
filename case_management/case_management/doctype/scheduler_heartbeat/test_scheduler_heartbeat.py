@@ -2,10 +2,56 @@
 from __future__ import unicode_literals
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_to_date, now_datetime
+from frappe.utils import add_to_date, now_datetime, nowdate
 
 
 class TestSchedulerHeartbeat(FrappeTestCase):
+	def _make_matter(self):
+		customer = frappe.get_doc({
+			"doctype": "Customer", "customer_name": "Scheduler Test Customer", "customer_type": "Company",
+		}).insert(ignore_mandatory=True)
+		self.addCleanup(frappe.delete_doc, "Customer", customer.name, force=True)
+
+		client = frappe.get_doc({
+			"doctype": "Legal Party", "party_name": "Scheduler Test Client", "party_type": "Organization",
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Legal Party", client.name, force=True)
+
+		intake = frappe.get_doc({
+			"doctype": "Intake", "proposed_client": client.name, "scope": "Advisory",
+			"parties": [{"legal_party": client.name, "role": "Proposed Client"}],
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Intake", intake.name, force=True)
+
+		from case_management.case_management.doctype.conflict_review.conflict_review import run_conflict_search
+		review_name = run_conflict_search(intake.name)
+		self.addCleanup(frappe.delete_doc, "Conflict Review", review_name, force=True)
+		review = frappe.get_doc("Conflict Review", review_name)
+		review.decision = "Clear"
+		review.save()
+
+		intake.status = "Under Review"
+		intake.save()
+		intake.status = "Approved"
+		intake.save()
+
+		practice_area = frappe.get_doc({"doctype": "Practice Area", "practice_area": "Scheduler Test Practice Area"}).insert()
+		self.addCleanup(frappe.delete_doc, "Practice Area", practice_area.name, force=True)
+
+		employee = frappe.db.get_value("Employee", {}, "name")
+		if not employee:
+			employee = frappe.get_doc({
+				"doctype": "Employee", "employee_name": "Scheduler Test Solicitor", "status": "Active",
+			}).insert(ignore_mandatory=True).name
+
+		matter = frappe.get_doc({
+			"doctype": "Matter", "client": customer.name, "intake": intake.name, "status": "Open",
+			"open_date": nowdate(), "practice_area": practice_area.name,
+			"transaction": "Scheduler Test Transaction", "responsible_solicitor": employee,
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
+		return matter
+
 	def tearDown(self):
 		frappe.db.set_value("Scheduler Heartbeat", "Scheduler Heartbeat", "last_heartbeat", None)
 		frappe.db.set_value("Scheduler Heartbeat", "Scheduler Heartbeat", "last_outage_detected", None)
@@ -41,12 +87,10 @@ class TestSchedulerHeartbeat(FrappeTestCase):
 		self.assertFalse(outage_detected)
 
 	def test_check_for_outage_processes_backlog_on_recovery(self):
-		matter = frappe.db.get_value("Matter", {}, "name")
-		if not matter:
-			self.skipTest("No Matter fixture available")
+		matter = self._make_matter()
 		obligation = frappe.get_doc({
-			"doctype": "Legal Obligation", "matter": matter, "obligation_type": "Other",
-			"due_date": frappe.utils.nowdate(), "responsible_user": "Administrator",
+			"doctype": "Legal Obligation", "matter": matter.name, "obligation_type": "Other",
+			"due_date": nowdate(), "responsible_user": "Administrator",
 		}).insert(ignore_permissions=True)
 		self.addCleanup(frappe.delete_doc, "Legal Obligation", obligation.name, force=True)
 
