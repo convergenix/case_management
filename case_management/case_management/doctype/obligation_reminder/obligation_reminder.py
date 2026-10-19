@@ -67,6 +67,25 @@ def generate_default_reminders(doc, method=None):
 
 
 @frappe.whitelist()
+def process_due_reminders(mark_overdue_after_minutes=60):
+	now = now_datetime()
+	due = frappe.get_all(
+		"Obligation Reminder",
+		filters={"status": "Queued", "scheduled_for": ["<=", now]},
+		fields=["name", "scheduled_for"],
+	)
+	for row in due:
+		minutes_late = (now - get_datetime(row.scheduled_for)).total_seconds() / 60
+		doc = frappe.get_doc("Obligation Reminder", row.name)
+		doc.status = "Delivered"
+		doc.delivered_at = now
+		if minutes_late > mark_overdue_after_minutes:
+			doc.is_overdue = 1
+		doc.save(ignore_permissions=True)
+	return len(due)
+
+
+@frappe.whitelist()
 def acknowledge(reminder):
 	doc = frappe.get_doc("Obligation Reminder", reminder)
 	if doc.status != "Delivered":

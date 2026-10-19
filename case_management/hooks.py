@@ -115,23 +115,13 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"case_management.tasks.all"
-# 	],
-# 	"daily": [
-# 		"case_management.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"case_management.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"case_management.tasks.weekly"
-# 	]
-# 	"monthly": [
-# 		"case_management.tasks.monthly"
-# 	]
-# }
+scheduler_events = {
+	"cron": {
+		"*/10 * * * *": [
+			"case_management.case_management.doctype.obligation_reminder.obligation_reminder.process_due_reminders"
+		]
+	}
+}
 
 # Testing
 # -------
