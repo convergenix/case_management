@@ -8,13 +8,14 @@ from case_management.case_management.doctype.conflict_review.conflict_review imp
 )
 
 
-def _make_user(testcase, email):
+def _make_user(testcase, email, roles=None):
 	if not frappe.db.exists("User", email):
 		frappe.get_doc({
 			"doctype": "User",
 			"email": email,
 			"first_name": "Conflict Test",
 			"send_welcome_email": 0,
+			"roles": [{"role": role} for role in (roles or [])],
 		}).insert(ignore_permissions=True)
 		testcase.addCleanup(frappe.delete_doc, "User", email, force=True, ignore_permissions=True)
 	return email
@@ -112,6 +113,76 @@ class TestConflictReview(FrappeTestCase):
 			frappe.set_user("Administrator")
 		self.addCleanup(frappe.delete_doc, "Conflict Review", review_name, force=True)
 		self.assertEqual(frappe.db.get_value("Conflict Review", review_name, "intake"), own_intake.name)
+
+	def test_only_a_privileged_reviewer_can_decide_a_conflict_review(self):
+		client = self._make_party("Self Clearance Client")
+		adverse = self._make_party("Self Clearance Adversary")
+		intake = self._make_intake(client, adverse)
+		review_name = run_conflict_search(intake.name)
+		self.addCleanup(frappe.delete_doc, "Conflict Review", review_name, force=True)
+
+		requester = _make_user(self, "test_self_clearing_requester@example.com")
+		frappe.set_user(requester)
+		try:
+			review = frappe.get_doc("Conflict Review", review_name)
+			review.decision = "Clear"
+			with self.assertRaises(frappe.PermissionError):
+				review.save()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertFalse(frappe.db.get_value("Conflict Review", review_name, "decision"))
+
+		reviewer = _make_user(self, "test_conflicts_reviewer@example.com", roles=["Conflicts Reviewer"])
+		frappe.set_user(reviewer)
+		try:
+			review = frappe.get_doc("Conflict Review", review_name)
+			review.decision = "Clear"
+			review.save()
+		finally:
+			frappe.set_user("Administrator")
+
+		decided = frappe.db.get_value(
+			"Conflict Review", review_name, ["decision", "reviewed_by"], as_dict=True
+		)
+		self.assertEqual(decided.decision, "Clear")
+		self.assertEqual(decided.reviewed_by, reviewer)
+
+	def test_an_edit_that_leaves_the_decision_alone_is_not_blocked(self):
+		client = self._make_party("Untouched Decision Client")
+		adverse = self._make_party("Untouched Decision Adversary")
+		intake = self._make_intake(client, adverse)
+		review = self._make_review(intake, "Clear")
+
+		requester = _make_user(self, "test_unrelated_edit_requester@example.com")
+		frappe.set_user(requester)
+		try:
+			reloaded = frappe.get_doc("Conflict Review", review.name)
+			reloaded.decision_reason = "Filed under the engagement letter."
+			reloaded.save()
+		finally:
+			frappe.set_user("Administrator")
+
+		self.assertEqual(
+			frappe.db.get_value("Conflict Review", review.name, "decision_reason"),
+			"Filed under the engagement letter.",
+		)
+
+	def test_search_provenance_is_stamped_server_side(self):
+		client = self._make_party("Provenance Client")
+		adverse = self._make_party("Provenance Adversary")
+		intake = self._make_intake(client, adverse)
+
+		review = frappe.get_doc({
+			"doctype": "Conflict Review",
+			"intake": intake.name,
+			"party_set_hash": "a-hash-the-client-made-up",
+			"search_timestamp": "2000-01-01 00:00:00",
+			"searched_by": "Administrator",
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Conflict Review", review.name, force=True)
+
+		self.assertEqual(review.party_set_hash, intake.get_party_set_hash())
+		self.assertNotEqual(str(review.search_timestamp), "2000-01-01 00:00:00")
 
 	def _make_review(self, intake, decision):
 		review = frappe.get_doc({
