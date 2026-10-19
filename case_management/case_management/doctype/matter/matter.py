@@ -14,7 +14,7 @@ TRANSITIONS = {
     "Active": {"On Hold", "Closing"},
     "On Hold": {"Active", "Closing"},
     "Closing": {"Closed", "Active"},
-    "Closed": set(),
+    "Closed": {"Archived"},
     "Archived": set(),
 }
 

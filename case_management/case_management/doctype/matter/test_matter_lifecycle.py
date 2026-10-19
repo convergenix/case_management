@@ -273,6 +273,23 @@ class TestMatterLifecycle(FrappeTestCase):
 		self.assertEqual(matter.state_log[-1].new_state, "Active")
 		self.assertEqual(matter.state_log[-1].reason, "Client reinstated the engagement.")
 
+	def test_closed_matter_can_be_archived(self):
+		matter = self._make_matter("Archive Flow")
+		matter.status = "Active"
+		matter.save()
+		matter.status = "Closing"
+		matter.save()
+		matter.status = "Closed"
+		matter.save()
+
+		matter.status = "Archived"
+		matter.save()
+
+		matter.reload()
+		self.assertEqual(matter.status, "Archived")
+		self.assertEqual(matter.state_log[-1].previous_state, "Closed")
+		self.assertEqual(matter.state_log[-1].new_state, "Archived")
+
 	def test_reopen_requires_reason(self):
 		intake = self._make_approved_intake("Reopen Flow")
 		customer = self._make_customer("Reopen Flow")
