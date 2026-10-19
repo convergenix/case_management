@@ -1,0 +1,144 @@
+{
+ "actions": [],
+ "autoname": "CR-.#####",
+ "creation": "2026-10-19 00:00:00.000000",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "intake",
+  "party_set_hash",
+  "column_break_header",
+  "search_timestamp",
+  "searched_by",
+  "total_records_searched",
+  "section_break_matches",
+  "matches",
+  "section_break_decision",
+  "decision",
+  "decision_reason",
+  "waiver_evidence",
+  "column_break_decision",
+  "reviewed_by",
+  "reviewed_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "intake",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Intake",
+   "options": "Intake",
+   "reqd": 1
+  },
+  {
+   "fieldname": "party_set_hash",
+   "fieldtype": "Data",
+   "label": "Party Set Hash (at time of search)",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_header",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "search_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Search Timestamp",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "searched_by",
+   "fieldtype": "Link",
+   "label": "Searched By",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "Count of Legal Party records included in this search — stands in for a corpus/index version until a dedicated search index exists.",
+   "fieldname": "total_records_searched",
+   "fieldtype": "Int",
+   "label": "Total Records Searched",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_matches",
+   "fieldtype": "Section Break",
+   "label": "Candidate Matches"
+  },
+  {
+   "fieldname": "matches",
+   "fieldtype": "Table",
+   "label": "Matches",
+   "options": "Conflict Match"
+  },
+  {
+   "fieldname": "section_break_decision",
+   "fieldtype": "Section Break",
+   "label": "Decision"
+  },
+  {
+   "fieldname": "decision",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Decision",
+   "options": "\nClear\nRestricted Match - Escalated\nWaiver Granted\nDeclined"
+  },
+  {
+   "fieldname": "decision_reason",
+   "fieldtype": "Small Text",
+   "label": "Decision Reason"
+  },
+  {
+   "fieldname": "waiver_evidence",
+   "fieldtype": "Attach",
+   "label": "Waiver Evidence"
+  },
+  {
+   "fieldname": "column_break_decision",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reviewed_by",
+   "fieldtype": "Link",
+   "label": "Reviewed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reviewed_on",
+   "fieldtype": "Datetime",
+   "label": "Reviewed On",
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 0,
+ "links": [],
+ "modified": "2026-10-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Case Management",
+ "name": "Conflict Review",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
