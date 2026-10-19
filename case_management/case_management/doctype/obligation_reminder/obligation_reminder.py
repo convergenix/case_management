@@ -34,12 +34,21 @@ class ObligationReminder(Document):
 
 def generate_default_reminders(doc, method=None):
 	obligation_name = doc.name if hasattr(doc, 'name') else doc
+	obligation = doc if hasattr(doc, 'status') else frappe.get_doc("Legal Obligation", obligation_name)
 
-	if frappe.db.exists("Obligation Reminder", {"obligation": obligation_name}):
+	if obligation.status != "Active":
 		return
 
-	obligation = doc if hasattr(doc, 'status') else frappe.get_doc("Legal Obligation", obligation_name)
-	if obligation.status != "Active":
+	existing_queued = frappe.get_all(
+		"Obligation Reminder",
+		filters={"obligation": obligation_name, "status": ["in", ["Queued"]]},
+		pluck="name",
+	)
+
+	if obligation.previous_due_date and str(obligation.previous_due_date) != str(obligation.due_date):
+		for reminder_name in existing_queued:
+			frappe.db.set_value("Obligation Reminder", reminder_name, "status", "Superseded")
+	elif frappe.db.exists("Obligation Reminder", {"obligation": obligation_name}):
 		return
 
 	due = get_datetime(obligation.due_date)
@@ -47,7 +56,7 @@ def generate_default_reminders(doc, method=None):
 		scheduled_for = add_days(due, -days_before)
 		frappe.get_doc({
 			"doctype": "Obligation Reminder",
-			"obligation": obligation.name,
+			"obligation": obligation_name,
 			"scheduled_for": scheduled_for,
 			"recipient": obligation.responsible_user,
 			"escalation_level": "Owner",
