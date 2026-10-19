@@ -195,8 +195,8 @@ def get_matter_access_condition(matter_column, user=None):
     )
 
 
-# Subject to the same base-DocPerm limitation documented above
-# get_permission_query_conditions.
+# Subject to the same base-DocPerm limitation documented on
+# get_permission_query_conditions above.
 def has_permission(doc, user=None, permission_type=None):
     if not user:
         user = frappe.session.user
