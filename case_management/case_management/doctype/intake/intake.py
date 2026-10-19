@@ -33,7 +33,13 @@ class Intake(Document):
 			if self.status not in TRANSITIONS.get(previous_status, set()):
 				frappe.throw(f"Cannot move Intake from {previous_status} to {self.status}.")
 
-		if previous_status == "Approved" and self.status == "Approved" and self.has_value_changed("parties"):
+		previous_doc = self.get_doc_before_save()
+		if (
+			previous_status == "Approved"
+			and self.status == "Approved"
+			and previous_doc
+			and previous_doc.get_party_set_hash() != self.get_party_set_hash()
+		):
 			self.status = "Under Review"
 			frappe.msgprint(
 				"Party set changed after approval — Intake reverted to Under Review for re-review."
