@@ -23,10 +23,18 @@ class LegalObligation(Document):
 			self.status = self.status or "Proposed"
 		else:
 			previous = frappe.db.get_value(
-				"Legal Obligation", self.name, ["status", "due_date"], as_dict=True
+				"Legal Obligation",
+				self.name,
+				["status", "due_date", "last_reminder_sync_date"],
+				as_dict=True,
 			)
 			previous_status = previous.status
 			previous_due_date = previous.due_date
+			# Only generate_default_reminders may move this field, and it does so
+			# with frappe.db.set_value, which never reaches validate(). Anything a
+			# caller submits here is discarded, otherwise pre-stamping it would
+			# suppress reminder generation for the matching due date.
+			self.last_reminder_sync_date = previous.last_reminder_sync_date
 
 		if previous_status != self.status:
 			if self.status not in TRANSITIONS.get(previous_status, set()):

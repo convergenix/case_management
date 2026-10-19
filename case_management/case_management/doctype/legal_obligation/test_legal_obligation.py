@@ -333,6 +333,27 @@ class TestLegalObligation(FrappeTestCase):
 			obligation.save()
 		self.assertIn("independent", str(caught.exception))
 
+	def test_pre_stamping_the_reminder_sync_date_cannot_suppress_reminder_generation(self):
+		obligation = self._make_matter_and_obligation(is_critical=0)
+		obligation.status = "Verified"
+		obligation.save()
+		self.assertFalse(frappe.db.get_value("Legal Obligation", obligation.name, "last_reminder_sync_date"))
+
+		obligation.last_reminder_sync_date = obligation.due_date
+		obligation.save()
+		self.assertFalse(frappe.db.get_value("Legal Obligation", obligation.name, "last_reminder_sync_date"))
+
+		obligation.status = "Active"
+		obligation.save()
+		reminders = frappe.get_all(
+			"Obligation Reminder",
+			filters={"obligation": obligation.name, "status": "Queued"},
+			pluck="name",
+		)
+		for r in reminders:
+			self.addCleanup(frappe.delete_doc, "Obligation Reminder", r, force=True)
+		self.assertEqual(len(reminders), 2)
+
 	def test_second_reschedule_requires_its_own_fresh_reason(self):
 		obligation = self._make_matter_and_obligation(is_critical=0)
 		obligation.status = "Verified"
