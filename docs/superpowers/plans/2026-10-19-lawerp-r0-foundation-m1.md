@@ -15,8 +15,8 @@
 - All new doctypes live in the existing `Case Management` module, directory `case_management/case_management/doctype/<name>/`, matching the current app's layout (no new module).
 - Frappe version in this bench is 15.99.0 — use the current (not legacy) DocType JSON schema: include `actions`, `field_order`, `links`, `naming_rule`, `states`, `row_format`, `sort_field`, `sort_order` keys as seen in `time_tracking.json`. Child tables use `"istable": 1` and an empty `"permissions": []` (they inherit the parent's permissions), matching `matter_team_item.json`.
 - Tests use `FrappeTestCase` (`from frappe.tests.utils import FrappeTestCase`) against the real bench DB on site `home.com`. No mocks, no raw SQL inserts in tests — build fixtures through `frappe.get_doc({...}).insert()`. Assert on returned document values / DB state, never on which internal method fired.
-- Run tests with: `bench --site home.com run-tests --module case_management.case_management.doctype.<doctype_folder>.test_<doctype_file>`
-- After creating or modifying any DocType JSON file, the site's schema must be synced with `bench --site home.com migrate` before a test that uses that DocType will pass — the JSON file alone does not create the DB table or `tabDocType` row. Each task below has an explicit migrate step at the point it's needed; don't skip it even if a step looks redundant.
+- Run tests with: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.<doctype_folder>.test_<doctype_file>`. The `--skip-test-records` flag is required — without it, Frappe's test runner recursively auto-generates dependency fixtures (e.g. `Matter` → `Sales Invoice` → `Warehouse`, pulling in this heavily-customized bench's standard ERPNext test fixtures), which breaks on pre-existing, unrelated customizations. None of the tests in this plan rely on Frappe's auto-generated test records — every fixture is built explicitly via `frappe.get_doc({...}).insert()` inside the test itself, so this flag has no effect on test correctness.
+- After creating or modifying any DocType JSON file, the site's schema must be synced before a test that uses that DocType will pass — the JSON file alone does not create the DB table or `tabDocType` row. **Do not run `bench --site home.com migrate`** — this site has pre-existing, unrelated broken Custom Fields (orphaned `posa_*` fields from a removed POS Awesome install, and two `Bridge Clinic`-module fields pointing to a DocType that doesn't exist on this site) that make a full `migrate` fail every time, regardless of anything in this plan. Instead, sync each new/changed doctype individually: `bench --site home.com --force reload-doc case_management doctype <docname>` (docname is the doctype's scrubbed/lowercased folder name, e.g. `legal_party`; `--site` and `--force` must come *before* `reload-doc` — they're options on `bench` itself, not on the subcommand). This calls the same underlying `frappe.reload_doc()` Frappe uses internally, scoped to one doctype, and does not trigger the broken site-wide customization validation. `--force` matters most when re-syncing an *existing* doctype (e.g. `matter` in Task 4) — without it, Frappe may skip the reload if the JSON's `modified` timestamp looks unchanged. Each task below has explicit reload-doc commands at the point they're needed; don't skip them even if a step looks redundant.
 - No new Python dependencies — everything here uses the standard library (`hashlib`) and `frappe`/`frappe.utils` already in use elsewhere in this app.
 - Money/financial-conservation work (Fee Note, billing) is explicitly out of scope for M1 — that's M3, a separate future plan.
 
@@ -272,7 +272,7 @@ class TestLegalParty(FrappeTestCase):
 
 - [ ] **Step 6: Run test to verify it fails**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.legal_party.test_legal_party`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.legal_party.test_legal_party`
 Expected: FAIL — DocType "Legal Party" not found (JSON not yet picked up) or `normalized_name` not computed (empty string vs expected value).
 
 - [ ] **Step 7: Write `legal_party.py` (minimal implementation)**
@@ -303,12 +303,16 @@ class LegalParty(Document):
 
 - [ ] **Step 8: Sync the new DocTypes into the site**
 
-Run: `bench --site home.com migrate`
-Expected: Completes without error; creates the `tabLegal Party` and `tabLegal Party Relation` tables and `DocType` records.
+Run:
+```bash
+bench --site home.com --force reload-doc case_management doctype legal_party_relation
+bench --site home.com --force reload-doc case_management doctype legal_party
+```
+Expected: Both complete with no output/error; creates the `tabLegal Party Relation` and `tabLegal Party` tables and `DocType` records. (Child table first, since `Legal Party` references it via its `related_parties` Table field.)
 
 - [ ] **Step 9: Run test to verify it passes**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.legal_party.test_legal_party`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.legal_party.test_legal_party`
 Expected: PASS
 
 - [ ] **Step 10: Commit**
@@ -681,7 +685,7 @@ class TestIntake(FrappeTestCase):
 
 - [ ] **Step 8: Run test to verify it fails**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.intake.test_intake`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.intake.test_intake`
 Expected: FAIL — DocType "Intake" not found, or `AttributeError: get_party_set_hash`.
 
 - [ ] **Step 9: Write `intake.py` (implementation)**
@@ -757,12 +761,17 @@ class Intake(Document):
 
 - [ ] **Step 10: Sync the new DocTypes into the site**
 
-Run: `bench --site home.com migrate`
-Expected: Completes without error; creates the `tabIntake`, `tabIntake Party`, and `tabIntake Evidence` tables and `DocType` records.
+Run:
+```bash
+bench --site home.com --force reload-doc case_management doctype intake_party
+bench --site home.com --force reload-doc case_management doctype intake_evidence
+bench --site home.com --force reload-doc case_management doctype intake
+```
+Expected: All three complete with no output/error; creates the `tabIntake Party`, `tabIntake Evidence`, and `tabIntake` tables and `DocType` records. (Child tables first, since `Intake` references them via its `parties`/`evidence` Table fields.)
 
 - [ ] **Step 11: Run test to verify it passes**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.intake.test_intake`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.intake.test_intake`
 Expected: PASS
 
 - [ ] **Step 12: Commit**
@@ -1082,7 +1091,7 @@ class TestConflictReview(FrappeTestCase):
 
 - [ ] **Step 6: Run test to verify it fails**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.conflict_review.test_conflict_review`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.conflict_review.test_conflict_review`
 Expected: FAIL — `ImportError: cannot import name 'run_conflict_search'`.
 
 - [ ] **Step 7: Write `conflict_review.py` (implementation)**
@@ -1153,12 +1162,16 @@ def has_permission(doc, user=None, permission_type=None):
 
 - [ ] **Step 8: Sync the new DocTypes into the site**
 
-Run: `bench --site home.com migrate`
-Expected: Completes without error; creates the `tabConflict Review` and `tabConflict Match` tables and `DocType` records.
+Run:
+```bash
+bench --site home.com --force reload-doc case_management doctype conflict_match
+bench --site home.com --force reload-doc case_management doctype conflict_review
+```
+Expected: Both complete with no output/error; creates the `tabConflict Match` and `tabConflict Review` tables and `DocType` records. (Child table first, since `Conflict Review` references it via its `matches` Table field.)
 
 - [ ] **Step 9: Run test to verify it passes**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.conflict_review.test_conflict_review`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.conflict_review.test_conflict_review`
 Expected: PASS
 
 - [ ] **Step 10: Commit**
@@ -1528,7 +1541,7 @@ class TestMatterLifecycle(FrappeTestCase):
 
 - [ ] **Step 6: Run test to verify it fails**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.matter.test_matter_lifecycle`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.matter.test_matter_lifecycle`
 Expected: FAIL — Matter can currently be inserted without an `intake` value (no gate yet), and `state_log`/`intake`/`reopen_reason` fields don't exist yet.
 
 - [ ] **Step 7: Modify `matter.py`** — add the gate, transition enforcement, and permission functions. Insert the following near the top of the file (after the existing imports) and replace/extend the `Matter` class as shown; leave all the existing module-level functions (`create_new_folder`, `get_events`, `get_lawyer`, `make_invoice`, etc.) exactly as they are, below this block:
@@ -1684,17 +1697,21 @@ Note: this replaces the original `class Matter(Document): def before_submit(self
 
 - [ ] **Step 8: Sync the new/changed DocTypes into the site**
 
-Run: `bench --site home.com migrate`
-Expected: Completes without error; creates the `tabMatter State Log` table and `DocType` record, and applies the new/changed columns (`intake`, `waiting_on`, `is_restricted`, `reopen_reason`, `status` options) to the existing `tabMatter` table.
+Run:
+```bash
+bench --site home.com --force reload-doc case_management doctype matter_state_log
+bench --site home.com --force reload-doc case_management doctype matter
+```
+Expected: Both complete with no output/error. The first creates the `tabMatter State Log` table and `DocType` record; the second applies the new/changed columns (`intake`, `waiting_on`, `is_restricted`, `reopen_reason`, `status` options, `state_log`) to the existing `tabMatter` table. `--force` is required here — `matter` already exists in the DB, so a reload without it may be skipped as a no-op.
 
 - [ ] **Step 9: Run test to verify it passes**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.matter.test_matter_lifecycle`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.matter.test_matter_lifecycle`
 Expected: PASS
 
 - [ ] **Step 10: Confirm the pre-existing `test_matter.py` still passes (it's an empty `pass`-only test, included for completeness, not modified by this plan)**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.matter.test_matter`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.matter.test_matter`
 Expected: PASS (no-op test, unaffected)
 
 - [ ] **Step 11: Commit**
@@ -1832,7 +1849,7 @@ class TestMatterAccessControl(FrappeTestCase):
 
 - [ ] **Step 3: Run test to verify it fails**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.matter.test_matter_access`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.matter.test_matter_access`
 Expected: FAIL — the restricted matter is still visible to `outsider` because the hooks aren't registered yet (Frappe only calls `permission_query_conditions`/`has_permission` for a doctype if it's wired in `hooks.py`).
 
 - [ ] **Step 4: Register the hooks in `hooks.py`**
@@ -1866,7 +1883,7 @@ Also add `"Role"` is already in the `fixtures` list (`fixtures = ["Custom Field"
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.matter.test_matter_access`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.matter.test_matter_access`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -1996,12 +2013,12 @@ class TestM1Acceptance(FrappeTestCase):
 
 - [ ] **Step 2: Run the full M1 suite**
 
-Run: `bench --site home.com run-tests --module case_management.case_management.doctype.matter.test_m1_acceptance`
+Run: `bench --site home.com run-tests --skip-test-records --module case_management.case_management.doctype.matter.test_m1_acceptance`
 Expected: PASS — if any of these fail, the gap is in Tasks 1-5, not in this test file; go back and fix the relevant task before continuing.
 
 - [ ] **Step 3: Run every test file added in this plan together, to catch cross-task interference**
 
-Run: `bench --site home.com run-tests --app case_management`
+Run: `bench --site home.com run-tests --skip-test-records --app case_management`
 Expected: PASS (existing tests unaffected; all new M1 tests pass)
 
 - [ ] **Step 4: Commit**
