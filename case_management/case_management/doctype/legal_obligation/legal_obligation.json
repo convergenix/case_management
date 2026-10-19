@@ -174,8 +174,10 @@
   {
    "fieldname": "last_reminder_sync_date",
    "fieldtype": "Date",
+   "hidden": 1,
    "label": "Last Reminder Sync Date",
-   "no_copy": 1
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "description": "Required when changing Due Date after the obligation has been Verified or Active.",
