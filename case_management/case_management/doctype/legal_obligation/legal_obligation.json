@@ -1,0 +1,234 @@
+{
+ "actions": [],
+ "autoname": "OBL-.#####",
+ "creation": "2026-10-19 00:00:00.000000",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "matter",
+  "obligation_type",
+  "jurisdiction",
+  "column_break_1",
+  "due_date",
+  "date_only",
+  "due_time",
+  "timezone",
+  "sb_source",
+  "source_reference",
+  "sb_team",
+  "responsible_user",
+  "deputy",
+  "column_break_2",
+  "is_critical",
+  "verifier",
+  "sb_status",
+  "status",
+  "verified_by",
+  "verified_on",
+  "sb_reschedule",
+  "previous_due_date",
+  "reschedule_reason",
+  "sb_completion",
+  "completion_evidence",
+  "completed_by",
+  "completed_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "matter",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Matter",
+   "options": "Matter",
+   "reqd": 1
+  },
+  {
+   "fieldname": "obligation_type",
+   "fieldtype": "Select",
+   "label": "Obligation Type",
+   "options": "Court Hearing\nFiling Deadline\nLimitation Date\nRegulatory Submission\nClient Deadline\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "jurisdiction",
+   "fieldtype": "Data",
+   "label": "Jurisdiction"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Due Date",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "date_only",
+   "fieldtype": "Check",
+   "label": "Date-Only (No Specific Time)"
+  },
+  {
+   "depends_on": "eval:!doc.date_only",
+   "fieldname": "due_time",
+   "fieldtype": "Time",
+   "label": "Due Time"
+  },
+  {
+   "default": "Africa/Lagos",
+   "fieldname": "timezone",
+   "fieldtype": "Data",
+   "label": "Timezone"
+  },
+  {
+   "fieldname": "sb_source",
+   "fieldtype": "Section Break",
+   "label": "Source"
+  },
+  {
+   "fieldname": "source_reference",
+   "fieldtype": "Small Text",
+   "label": "Source Document / Instruction"
+  },
+  {
+   "fieldname": "sb_team",
+   "fieldtype": "Section Break",
+   "label": "Ownership"
+  },
+  {
+   "fieldname": "responsible_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Owner",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "deputy",
+   "fieldtype": "Link",
+   "label": "Deputy",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_critical",
+   "fieldtype": "Check",
+   "label": "Critical Date (Requires Independent Verification)"
+  },
+  {
+   "description": "Required reviewer for critical dates before status can reach Verified.",
+   "fieldname": "verifier",
+   "fieldtype": "Link",
+   "label": "Verifier",
+   "options": "User"
+  },
+  {
+   "fieldname": "sb_status",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Proposed",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Proposed\nVerified\nActive\nCompleted\nSuperseded\nCancelled"
+  },
+  {
+   "fieldname": "verified_by",
+   "fieldtype": "Link",
+   "label": "Verified By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "verified_on",
+   "fieldtype": "Datetime",
+   "label": "Verified On",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_reschedule",
+   "fieldtype": "Section Break",
+   "label": "Reschedule History"
+  },
+  {
+   "fieldname": "previous_due_date",
+   "fieldtype": "Date",
+   "label": "Previous Due Date",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "description": "Required when changing Due Date after the obligation has been Verified or Active.",
+   "fieldname": "reschedule_reason",
+   "fieldtype": "Small Text",
+   "label": "Reschedule Reason",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sb_completion",
+   "fieldtype": "Section Break",
+   "label": "Completion"
+  },
+  {
+   "description": "Required when marking Completed.",
+   "fieldname": "completion_evidence",
+   "fieldtype": "Small Text",
+   "label": "Completion Evidence",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "completed_by",
+   "fieldtype": "Link",
+   "label": "Completed By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_on",
+   "fieldtype": "Datetime",
+   "label": "Completed On",
+   "no_copy": 1,
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 0,
+ "links": [],
+ "modified": "2026-10-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Case Management",
+ "name": "Legal Obligation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
