@@ -77,6 +77,42 @@ class TestConflictReview(FrappeTestCase):
 		self.assertFalse(has_permission(review, user="test_ordinary_requester@example.com"))
 		self.assertTrue(has_permission(review, user="Administrator"))
 
+	def test_run_conflict_search_requires_read_access_to_the_intake(self):
+		# Intake grants role "All" blanket read, so the denial has to come from a
+		# User Permission scoping the user to one Intake — the configuration
+		# frappe.has_permission consults. applicable_for keeps the scope on the
+		# Intake doctype itself: without it, the restriction would also reject
+		# the Conflict Review's intake link field and the search would fail at
+		# insert time regardless of whether the intake was ever readable.
+		own_client = self._make_party("Own Search Client")
+		own_adverse = self._make_party("Own Search Adversary")
+		own_intake = self._make_intake(own_client, own_adverse)
+
+		other_client = self._make_party("Someone Elses Client")
+		other_adverse = self._make_party("Someone Elses Adversary")
+		other_intake = self._make_intake(other_client, other_adverse)
+
+		user = _make_user(self, "test_intake_scoped_user@example.com")
+		scope = frappe.get_doc({
+			"doctype": "User Permission",
+			"user": user,
+			"allow": "Intake",
+			"for_value": own_intake.name,
+			"applicable_for": "Intake",
+		}).insert(ignore_permissions=True)
+		self.addCleanup(frappe.delete_doc, "User Permission", scope.name, force=True)
+
+		frappe.set_user(user)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				run_conflict_search(other_intake.name)
+
+			review_name = run_conflict_search(own_intake.name)
+		finally:
+			frappe.set_user("Administrator")
+		self.addCleanup(frappe.delete_doc, "Conflict Review", review_name, force=True)
+		self.assertEqual(frappe.db.get_value("Conflict Review", review_name, "intake"), own_intake.name)
+
 	def _make_review(self, intake, decision):
 		review = frappe.get_doc({
 			"doctype": "Conflict Review",

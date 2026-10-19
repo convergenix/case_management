@@ -16,6 +16,7 @@ class ConflictReview(Document):
 
 @frappe.whitelist()
 def run_conflict_search(intake):
+	frappe.has_permission("Intake", "read", intake, throw=True)
 	intake_doc = frappe.get_doc("Intake", intake)
 
 	review = frappe.new_doc("Conflict Review")
