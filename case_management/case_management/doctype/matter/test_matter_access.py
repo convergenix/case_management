@@ -84,12 +84,14 @@ class TestMatterAccessControl(FrappeTestCase):
 		return intake
 
 	def test_restricted_matter_excluded_from_list_for_unrelated_user(self):
-		# Matter's base role permissions only grant read to "Lawyer Manager" and
-		# "Partners" (no "All"), so this user is given the "Lawyer Manager" role
-		# (Partners is disabled in the database). Otherwise they'd have zero baseline
-		# access to any Matter and the test would pass for the wrong reason (no role
-		# permission at all, rather than the is_restricted ethical-wall check this
-		# test is meant to isolate).
+		# Matter's own DocPerm for "Lawyer Manager" has if_owner=1 (pre-existing,
+		# unrelated to this task) — that role can only read Matters it personally
+		# owns. "Partners" has unrestricted read but is disabled in this bench's
+		# data. So the outsider user is made the OWNER of the test matter (by
+		# creating it while impersonating them) rather than relying on either
+		# role's baseline grant — this isolates exactly what we're testing: does
+		# is_restricted deny them even though they own the record and aren't on
+		# its team.
 		outsider = "test_outsider_user@example.com"
 		if not frappe.db.exists("User", outsider):
 			frappe.get_doc({
@@ -103,18 +105,26 @@ class TestMatterAccessControl(FrappeTestCase):
 
 		intake = self._make_approved_intake("Restricted List")
 		customer = self._make_customer("Restricted List")
-		matter = frappe.get_doc({
-			"doctype": "Matter",
-			"client": customer.name,
-			"intake": intake.name,
-			"status": "Open",
-			"is_restricted": 1,
-			**self._matter_base_fields("Restricted List"),
-		}).insert()
+
+		frappe.set_user(outsider)
+		try:
+			matter = frappe.get_doc({
+				"doctype": "Matter",
+				"client": customer.name,
+				"intake": intake.name,
+				"status": "Open",
+				"is_restricted": 1,
+				**self._matter_base_fields("Restricted List"),
+			}).insert(ignore_permissions=True)
+		finally:
+			frappe.set_user("Administrator")
 		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
 
 		from case_management.case_management.doctype.matter.matter import has_permission
-		# Verify that the has_permission function (wired via hooks.py) correctly
-		# denies access to restricted matters for users not on the Matter team
+		# When hooks are registered, Frappe calls has_permission internally
+		# for permission-mediated queries. This test verifies that the function
+		# correctly denies access to restricted matters via the ethical-wall check
+		# (is_restricted = True and user not on Matter team), even when the user
+		# owns the document and has a role with if_owner permission.
 		self.assertFalse(has_permission(matter, user=outsider))
 		self.assertTrue(has_permission(matter, user="Administrator"))
