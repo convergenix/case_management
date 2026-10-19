@@ -66,7 +66,6 @@ def generate_default_reminders(doc, method=None):
 		doc.last_reminder_sync_date = obligation.due_date
 
 
-@frappe.whitelist()
 def process_due_reminders(mark_overdue_after_minutes=60):
 	now = now_datetime()
 	due = frappe.get_all(
