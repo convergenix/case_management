@@ -72,7 +72,7 @@
    "label": "Aliases"
   },
   {
-   "description": "One alias per line. Used for exact/normalized-name conflict matching.",
+   "description": "One alias per line. Captured for review but not yet searched — conflict matching currently covers only the identifier and normalized name on this record. Alias and fuzzy matching are deferred.",
    "fieldname": "aliases",
    "fieldtype": "Small Text",
    "label": "Known Aliases"

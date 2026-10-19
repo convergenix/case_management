@@ -26,7 +26,7 @@ class Intake(Document):
 		if not self.requested_on:
 			self.requested_on = now_datetime()
 
-		if not any(row.role == "Proposed Client" for row in self.parties):
+		if sum(1 for row in self.parties if row.role == "Proposed Client") != 1:
 			frappe.throw("Intake must include exactly one party with role 'Proposed Client'.")
 
 		if previous_status and previous_status != self.status:

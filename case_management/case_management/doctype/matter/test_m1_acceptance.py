@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import now_datetime
 from case_management.case_management.doctype.conflict_review.conflict_review import run_conflict_search
 
 
