@@ -1,0 +1,145 @@
+{
+ "actions": [],
+ "autoname": "INTK-.#####",
+ "creation": "2026-10-19 00:00:00.000000",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "proposed_client",
+  "practice_area",
+  "status",
+  "column_break_header",
+  "requested_by",
+  "requested_on",
+  "converted_matter",
+  "section_break_scope",
+  "scope",
+  "section_break_parties",
+  "parties",
+  "section_break_evidence",
+  "evidence",
+  "section_break_decision",
+  "decision_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "proposed_client",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Proposed Client",
+   "options": "Legal Party",
+   "reqd": 1
+  },
+  {
+   "fieldname": "practice_area",
+   "fieldtype": "Link",
+   "label": "Practice Area",
+   "options": "Practice Area"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nUnder Review\nApproved\nDeclined\nWithdrawn\nConverted",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_header",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "requested_by",
+   "fieldtype": "Link",
+   "label": "Requested By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "requested_on",
+   "fieldtype": "Datetime",
+   "label": "Requested On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "converted_matter",
+   "fieldtype": "Link",
+   "label": "Converted Matter",
+   "no_copy": 1,
+   "options": "Matter",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_scope",
+   "fieldtype": "Section Break",
+   "label": "Scope"
+  },
+  {
+   "fieldname": "scope",
+   "fieldtype": "Small Text",
+   "label": "Scope of Engagement",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_parties",
+   "fieldtype": "Section Break",
+   "label": "Party Set"
+  },
+  {
+   "fieldname": "parties",
+   "fieldtype": "Table",
+   "label": "Parties",
+   "options": "Intake Party",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_evidence",
+   "fieldtype": "Section Break",
+   "label": "Evidence"
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Table",
+   "label": "Evidence",
+   "options": "Intake Evidence"
+  },
+  {
+   "fieldname": "section_break_decision",
+   "fieldtype": "Section Break",
+   "label": "Decision"
+  },
+  {
+   "fieldname": "decision_reason",
+   "fieldtype": "Small Text",
+   "label": "Decision Reason"
+  }
+ ],
+ "is_submittable": 0,
+ "links": [],
+ "modified": "2026-10-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Case Management",
+ "name": "Intake",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
