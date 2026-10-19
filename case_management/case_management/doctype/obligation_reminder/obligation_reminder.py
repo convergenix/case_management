@@ -19,11 +19,12 @@ DEFAULT_ADVANCE_DAYS = [7, 1]
 class ObligationReminder(Document):
 	def validate(self):
 		if self.is_new():
+			previous_status = "Queued"
 			self.status = self.status or "Queued"
 			self.queued_at = self.queued_at or now_datetime()
-			return
+		else:
+			previous_status = frappe.db.get_value("Obligation Reminder", self.name, "status")
 
-		previous_status = frappe.db.get_value("Obligation Reminder", self.name, "status")
 		if previous_status != self.status:
 			if self.status not in TRANSITIONS.get(previous_status, set()):
 				frappe.throw(

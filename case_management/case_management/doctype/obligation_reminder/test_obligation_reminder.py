@@ -100,3 +100,23 @@ class TestObligationReminder(FrappeTestCase):
 		result = acknowledge(reminders[0])
 		self.assertEqual(result, reminders[0])
 		self.assertEqual(frappe.db.get_value("Obligation Reminder", reminders[0], "status"), "Acknowledged")
+
+	def test_direct_creation_with_invalid_status_is_rejected(self):
+		obligation = self._make_active_obligation()
+		reminder_name = None
+		try:
+			reminder = frappe.get_doc({
+				"doctype": "Obligation Reminder",
+				"obligation": obligation.name,
+				"scheduled_for": now_datetime(),
+				"recipient": "Administrator",
+				"status": "Completed",
+			})
+			reminder.insert()
+			reminder_name = reminder.name
+			self.fail("Expected ValidationError when creating Obligation Reminder with status=Completed")
+		except frappe.ValidationError as e:
+			self.assertIn("Cannot move Obligation Reminder from Queued to Completed", str(e))
+		finally:
+			if reminder_name:
+				self.addCleanup(frappe.delete_doc, "Obligation Reminder", reminder_name, force=True)
