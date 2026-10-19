@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import now_datetime, nowdate
+from case_management.case_management.doctype.conflict_review.conflict_review import run_conflict_search
+from case_management.case_management.doctype.intake.intake import approve, decline, submit_for_review
 from case_management.case_management.doctype.matter.matter import REOPEN_ROLES, reopen, resolve
 
 
@@ -163,6 +165,57 @@ class TestMatterLifecycle(FrappeTestCase):
 		}).insert()
 		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
 		return matter
+
+	def test_desk_entry_points_carry_an_intake_from_draft_to_an_opened_matter(self):
+		client = self._make_party("Desk Journey Client")
+		intake = frappe.get_doc({
+			"doctype": "Intake",
+			"proposed_client": client.name,
+			"scope": "General advisory",
+			"parties": [{"legal_party": client.name, "role": "Proposed Client"}],
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Intake", intake.name, force=True)
+		self.assertEqual(intake.status, "Draft")
+
+		submit_for_review(intake.name)
+		self.assertEqual(frappe.db.get_value("Intake", intake.name, "status"), "Under Review")
+
+		review_name = run_conflict_search(intake.name)
+		self.addCleanup(frappe.delete_doc, "Conflict Review", review_name, force=True)
+		review = frappe.get_doc("Conflict Review", review_name)
+		review.decision = "Clear"
+		review.save()
+
+		approve(intake.name)
+		self.assertEqual(frappe.db.get_value("Intake", intake.name, "status"), "Approved")
+
+		customer = self._make_customer("Desk Journey")
+		matter = frappe.get_doc({
+			"doctype": "Matter",
+			"client": customer.name,
+			"intake": intake.name,
+			"status": "Open",
+			**self._matter_base_fields("Desk Journey"),
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
+		self.assertEqual(frappe.db.get_value("Intake", intake.name, "status"), "Converted")
+
+	def test_decline_entry_point_records_the_reason(self):
+		client = self._make_party("Declined Journey Client")
+		intake = frappe.get_doc({
+			"doctype": "Intake",
+			"proposed_client": client.name,
+			"scope": "General advisory",
+			"parties": [{"legal_party": client.name, "role": "Proposed Client"}],
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Intake", intake.name, force=True)
+
+		submit_for_review(intake.name)
+		decline(intake.name, "Unacceptable conflict risk.")
+
+		intake.reload()
+		self.assertEqual(intake.status, "Declined")
+		self.assertEqual(intake.decision_reason, "Unacceptable conflict risk.")
 
 	def test_resolve_endpoint_closes_a_closing_matter_and_logs_the_transition(self):
 		matter = self._make_matter("Resolve Endpoint")

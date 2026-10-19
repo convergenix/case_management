@@ -74,3 +74,32 @@ class Intake(Document):
 				"The Conflict Review on file is stale — the party set has changed since it ran. "
 				"Run a new conflict search before approving."
 			)
+
+
+def _set_status(intake, status, decision_reason=None):
+	doc = frappe.get_doc("Intake", intake)
+	doc.status = status
+	if decision_reason:
+		doc.decision_reason = decision_reason
+	doc.save()
+	return doc.name
+
+
+@frappe.whitelist()
+def submit_for_review(intake):
+	return _set_status(intake, "Under Review")
+
+
+@frappe.whitelist()
+def approve(intake):
+	return _set_status(intake, "Approved")
+
+
+@frappe.whitelist()
+def decline(intake, reason=None):
+	return _set_status(intake, "Declined", decision_reason=reason)
+
+
+@frappe.whitelist()
+def withdraw(intake):
+	return _set_status(intake, "Withdrawn")
