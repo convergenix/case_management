@@ -85,10 +85,11 @@ class TestMatterAccessControl(FrappeTestCase):
 
 	def test_restricted_matter_excluded_from_list_for_unrelated_user(self):
 		# Matter's base role permissions only grant read to "Lawyer Manager" and
-		# "Partners" (no "All"), so this user is given the "Lawyer Manager" role —
-		# otherwise they'd have zero baseline access to any Matter and the test
-		# would pass for the wrong reason (no role permission at all, rather than
-		# the is_restricted ethical-wall check this test is meant to isolate).
+		# "Partners" (no "All"), so this user is given the "Lawyer Manager" role
+		# (Partners is disabled in the database). Otherwise they'd have zero baseline
+		# access to any Matter and the test would pass for the wrong reason (no role
+		# permission at all, rather than the is_restricted ethical-wall check this
+		# test is meant to isolate).
 		outsider = "test_outsider_user@example.com"
 		if not frappe.db.exists("User", outsider):
 			frappe.get_doc({
@@ -113,5 +114,7 @@ class TestMatterAccessControl(FrappeTestCase):
 		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
 
 		from case_management.case_management.doctype.matter.matter import has_permission
+		# Verify that the has_permission function (wired via hooks.py) correctly
+		# denies access to restricted matters for users not on the Matter team
 		self.assertFalse(has_permission(matter, user=outsider))
 		self.assertTrue(has_permission(matter, user="Administrator"))
