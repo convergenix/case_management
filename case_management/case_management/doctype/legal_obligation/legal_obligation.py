@@ -78,3 +78,16 @@ class LegalObligation(Document):
 				# Cleared once captured for THIS reschedule, so a later one
 				# can't pass this gate on stale text from an earlier one.
 				self.reschedule_reason = None
+
+
+def get_permission_query_conditions(user=None):
+	from case_management.case_management.doctype.matter.matter import get_matter_access_condition
+	return get_matter_access_condition("`tabLegal Obligation`.matter", user)
+
+
+def has_permission(doc, user=None, permission_type=None):
+	if not user:
+		user = frappe.session.user
+	from case_management.case_management.doctype.matter.matter import has_permission as matter_has_permission
+	matter_doc = frappe.get_cached_doc("Matter", doc.matter)
+	return matter_has_permission(matter_doc, user=user, permission_type=permission_type)

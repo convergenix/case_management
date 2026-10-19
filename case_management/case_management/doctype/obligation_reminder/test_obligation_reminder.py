@@ -63,6 +63,47 @@ class TestObligationReminder(FrappeTestCase):
 		obligation.save()
 		return obligation
 
+	def _make_plain_user(self, email):
+		if not frappe.db.exists("User", email):
+			frappe.get_doc({
+				"doctype": "User",
+				"email": email,
+				"first_name": "Reminder Test",
+				"send_welcome_email": 0,
+				"roles": [{"role": "Lawyer Manager"}],
+			}).insert(ignore_permissions=True)
+			self.addCleanup(frappe.delete_doc, "User", email, force=True)
+		return email
+
+	def test_restricted_matter_hides_its_reminders_from_an_unrelated_user(self):
+		outsider = self._make_plain_user("reminder_access_outsider@example.com")
+		obligation = self._make_active_obligation()
+		reminders = frappe.get_all("Obligation Reminder", filters={"obligation": obligation.name}, pluck="name")
+		for r in reminders:
+			self.addCleanup(frappe.delete_doc, "Obligation Reminder", r, force=True)
+
+		frappe.set_user(outsider)
+		try:
+			visible_before = frappe.get_list(
+				"Obligation Reminder", filters={"name": ["in", reminders]}, pluck="name"
+			)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(sorted(visible_before), sorted(reminders))
+
+		matter = frappe.get_doc("Matter", obligation.matter)
+		matter.is_restricted = 1
+		matter.save()
+
+		frappe.set_user(outsider)
+		try:
+			visible_after = frappe.get_list(
+				"Obligation Reminder", filters={"name": ["in", reminders]}, pluck="name"
+			)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(visible_after, [])
+
 	def test_activating_obligation_generates_default_reminders(self):
 		obligation = self._make_active_obligation()
 		reminders = frappe.get_all(

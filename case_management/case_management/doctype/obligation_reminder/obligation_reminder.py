@@ -95,3 +95,19 @@ def acknowledge(reminder):
 	doc.acknowledged_by = frappe.session.user
 	doc.save(ignore_permissions=True)
 	return doc.name
+
+
+def get_permission_query_conditions(user=None):
+	from case_management.case_management.doctype.matter.matter import get_permission_query_conditions as matter_condition
+	condition = matter_condition(user)
+	if not condition:
+		return ""
+	return "`tabObligation Reminder`.obligation in (select `tabLegal Obligation`.name from `tabLegal Obligation` where `tabLegal Obligation`.matter in (select `tabMatter`.name from `tabMatter` where {condition}))".format(condition=condition)
+
+
+def has_permission(doc, user=None, permission_type=None):
+	if not user:
+		user = frappe.session.user
+	from case_management.case_management.doctype.legal_obligation.legal_obligation import has_permission as obligation_has_permission
+	obligation_doc = frappe.get_cached_doc("Legal Obligation", doc.obligation)
+	return obligation_has_permission(obligation_doc, user=user, permission_type=permission_type)

@@ -275,6 +275,32 @@ class TestLegalObligation(FrappeTestCase):
 		self.assertEqual(obligation.status, "Verified")
 		self.assertEqual(obligation.verified_by, "Administrator")
 
+	def test_restricted_matter_hides_its_obligations_from_an_unrelated_user(self):
+		outsider = self._make_plain_user("obligation_access_outsider@example.com")
+		obligation = self._make_matter_and_obligation()
+
+		frappe.set_user(outsider)
+		try:
+			visible_before = frappe.get_list(
+				"Legal Obligation", filters={"name": obligation.name}, pluck="name"
+			)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertIn(obligation.name, visible_before)
+
+		matter = frappe.get_doc("Matter", obligation.matter)
+		matter.is_restricted = 1
+		matter.save()
+
+		frappe.set_user(outsider)
+		try:
+			visible_after = frappe.get_list(
+				"Legal Obligation", filters={"name": obligation.name}, pluck="name"
+			)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertNotIn(obligation.name, visible_after)
+
 	def test_marking_an_already_verified_obligation_critical_requires_a_verifier(self):
 		obligation = self._make_matter_and_obligation(is_critical=0)
 		obligation.status = "Verified"
