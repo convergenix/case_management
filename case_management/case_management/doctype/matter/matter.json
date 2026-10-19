@@ -19,6 +19,12 @@
   "close_date",
   "practice_area",
   "transaction",
+  "sb_lifecycle",
+  "intake",
+  "waiting_on",
+  "is_restricted",
+  "column_break_lifecycle",
+  "reopen_reason",
   "responsible_solicitor",
   "solicitor_name",
   "team",
@@ -34,6 +40,8 @@
   "expense",
   "sb5",
   "invoice",
+  "sb_state_log",
+  "state_log",
   "section_break_26",
   "amended_from",
   "cost_center",
@@ -59,7 +67,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Open\nPending Document\nAwaiting Filing\nOn-Hold\nFiled\nIn Mediation/Arbitration\nAwaiting Judgement/ Ruling\nPending\nClosed"
+   "options": "Open\nActive\nOn Hold\nClosing\nClosed\nArchived"
   },
   {
    "fieldname": "naming_series",
@@ -112,6 +120,56 @@
    "fieldtype": "Data",
    "label": "Transaction",
    "reqd": 1
+  },
+  {
+   "fieldname": "sb_lifecycle",
+   "fieldtype": "Section Break",
+   "label": "Lifecycle"
+  },
+  {
+   "description": "The approved Intake this Matter was opened from. Required for new matters; cannot be changed after opening.",
+   "fieldname": "intake",
+   "fieldtype": "Link",
+   "label": "Intake",
+   "options": "Intake",
+   "read_only_depends_on": "eval:!doc.__islocal",
+   "reqd": 1
+  },
+  {
+   "default": "None",
+   "fieldname": "waiting_on",
+   "fieldtype": "Select",
+   "label": "Waiting On",
+   "options": "None\nClient\nCourt\nCounterparty"
+  },
+  {
+   "fieldname": "column_break_lifecycle",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Required only when moving a Closed/Archived matter back to Open/Active.",
+   "fieldname": "reopen_reason",
+   "fieldtype": "Small Text",
+   "label": "Reopen Reason",
+   "no_copy": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_restricted",
+   "fieldtype": "Check",
+   "label": "Restricted (Ethical Wall)"
+  },
+  {
+   "fieldname": "sb_state_log",
+   "fieldtype": "Section Break",
+   "label": "State History"
+  },
+  {
+   "fieldname": "state_log",
+   "fieldtype": "Table",
+   "label": "State History",
+   "options": "Matter State Log",
+   "read_only": 1
   },
   {
    "fieldname": "team",

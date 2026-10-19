@@ -9,10 +9,100 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import cint, flt
 
 
+TRANSITIONS = {
+    "Open": {"Active", "On Hold", "Closing"},
+    "Active": {"On Hold", "Closing"},
+    "On Hold": {"Active", "Closing"},
+    "Closing": {"Closed", "Active"},
+    "Closed": set(),
+    "Archived": set(),
+}
+
+REOPEN_ROLES = {"Partner", "Managing Partner", "System Manager"}
+
+
 class Matter(Document):
+    def validate(self):
+        if self.is_new():
+            self._validate_intake_gate()
+        else:
+            self._enforce_state_transition()
+
+    def _validate_intake_gate(self):
+        if not self.intake:
+            frappe.throw("A Matter cannot be opened without an approved Intake.")
+        intake = frappe.get_doc("Intake", self.intake)
+        if intake.status != "Approved":
+            frappe.throw(f"Intake {intake.name} is not Approved (current status: {intake.status}).")
+        if intake.converted_matter:
+            frappe.throw(f"Intake {intake.name} has already been converted to Matter {intake.converted_matter}.")
+        reviews = frappe.get_all(
+            "Conflict Review",
+            filters={"intake": intake.name, "decision": ["in", ["Clear", "Waiver Granted"]]},
+            fields=["party_set_hash"],
+            order_by="search_timestamp desc",
+            limit=1,
+        )
+        if not reviews or reviews[0].party_set_hash != intake.get_party_set_hash():
+            frappe.throw(
+                "Conflict clearance for this Intake is missing or stale. "
+                "Re-run the conflict search before opening the matter."
+            )
+
+    def _enforce_state_transition(self):
+        previous_status = frappe.db.get_value("Matter", self.name, "status")
+        if previous_status == self.status:
+            return
+
+        allowed = TRANSITIONS.get(previous_status, set())
+        reopening = previous_status in ("Closed", "Archived") and self.status in ("Open", "Active")
+
+        if self.status not in allowed and not reopening:
+            frappe.throw(f"Invalid Matter status transition: {previous_status} -> {self.status}.")
+
+        if reopening:
+            if not self.reopen_reason:
+                frappe.throw("Reopening a Closed/Archived matter requires a reason in 'Reopen Reason'.")
+            if not REOPEN_ROLES & set(frappe.get_roles(frappe.session.user)):
+                frappe.throw("You are not authorized to reopen this matter.")
+
+        self.append("state_log", {
+            "previous_state": previous_status,
+            "new_state": self.status,
+            "changed_by": frappe.session.user,
+            "changed_at": frappe.utils.now_datetime(),
+            "reason": self.reopen_reason if reopening else "",
+        })
+
+        if reopening:
+            self.reopen_reason = None
+
+    def after_insert(self):
+        row = self.append("state_log", {
+            "previous_state": "",
+            "new_state": self.status,
+            "changed_by": frappe.session.user,
+            "changed_at": frappe.utils.now_datetime(),
+            "reason": "Matter opened",
+        })
+        row.db_insert()
+
+        frappe.db.set_value("Intake", self.intake, {
+            "status": "Converted",
+            "converted_matter": self.name,
+        })
+
     def before_submit(self):
-        self.status = "Close"
+        previous_status = frappe.db.get_value("Matter", self.name, "status")
+        self.status = "Closed"
         self.close_date = frappe.utils.nowdate()
+        self.append("state_log", {
+            "previous_state": previous_status,
+            "new_state": "Closed",
+            "changed_by": frappe.session.user,
+            "changed_at": frappe.utils.now_datetime(),
+            "reason": "Matter closed via submit",
+        })
 
     def on_trash(self):
         file = frappe.db.sql("select name from `tabFile` where file_name = \"Home/Clients/{0}\"".format(self.name))
@@ -36,6 +126,31 @@ class Matter(Document):
                 dt.title = row[0]
         else:
             frappe.throw("""Please select a Custom Field Preset. """)
+
+
+def get_permission_query_conditions(user=None):
+    if not user:
+        user = frappe.session.user
+    if {"System Manager", "Managing Partner"} & set(frappe.get_roles(user)):
+        return ""
+    return """(`tabMatter`.is_restricted = 0 or `tabMatter`.name in (
+        select mti.parent from `tabMatter Team Item` mti
+        inner join `tabEmployee` emp on emp.name = mti.employee
+        where emp.user_id = {user}
+    ))""".format(user=frappe.db.escape(user))
+
+
+def has_permission(doc, user=None, permission_type=None):
+    if not user:
+        user = frappe.session.user
+    if not doc.is_restricted:
+        return True
+    if {"System Manager", "Managing Partner"} & set(frappe.get_roles(user)):
+        return True
+    employee = frappe.db.get_value("Employee", {"user_id": user}, "name")
+    if not employee:
+        return False
+    return bool(frappe.db.exists("Matter Team Item", {"parent": doc.name, "employee": employee}))
 
 
 def create_new_folder(file_name, folder):

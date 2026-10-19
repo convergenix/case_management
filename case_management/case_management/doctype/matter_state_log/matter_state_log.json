@@ -1,0 +1,60 @@
+{
+ "creation": "2026-10-19 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "previous_state",
+  "new_state",
+  "changed_by",
+  "changed_at",
+  "reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "previous_state",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Previous State",
+   "read_only": 1
+  },
+  {
+   "fieldname": "new_state",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "New State",
+   "read_only": 1
+  },
+  {
+   "fieldname": "changed_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Changed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "changed_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Changed At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Data",
+   "label": "Reason",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "modified": "2026-10-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Case Management",
+ "name": "Matter State Log",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
