@@ -104,6 +104,9 @@ doc_events = {
     "Matter": {
         "on_update": "case_management.client.update_all_matter"
     },
+    "Legal Obligation": {
+        "on_update": "case_management.case_management.doctype.obligation_reminder.obligation_reminder.generate_default_reminders"
+    },
     "File": {
         "validate": "case_management.client.validate_update_tabfile_private"
     }
