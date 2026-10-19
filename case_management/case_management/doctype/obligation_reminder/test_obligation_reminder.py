@@ -142,6 +142,24 @@ class TestObligationReminder(FrappeTestCase):
 		self.assertEqual(result, reminders[0])
 		self.assertEqual(frappe.db.get_value("Obligation Reminder", reminders[0], "status"), "Acknowledged")
 
+	def test_only_the_recipient_can_acknowledge_a_reminder(self):
+		outsider = self._make_plain_user("reminder_ack_outsider@example.com")
+		obligation = self._make_active_obligation()
+		reminders = frappe.get_all("Obligation Reminder", filters={"obligation": obligation.name}, pluck="name")
+		for r in reminders:
+			self.addCleanup(frappe.delete_doc, "Obligation Reminder", r, force=True)
+		frappe.db.set_value("Obligation Reminder", reminders[0], "status", "Delivered")
+
+		from case_management.case_management.doctype.obligation_reminder.obligation_reminder import acknowledge
+		frappe.set_user(outsider)
+		try:
+			with self.assertRaises(frappe.ValidationError) as caught:
+				acknowledge(reminders[0])
+		finally:
+			frappe.set_user("Administrator")
+		self.assertIn("Only the recipient", str(caught.exception))
+		self.assertEqual(frappe.db.get_value("Obligation Reminder", reminders[0], "status"), "Delivered")
+
 	def test_direct_creation_with_invalid_status_is_rejected(self):
 		obligation = self._make_active_obligation()
 		reminder_name = None

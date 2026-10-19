@@ -88,11 +88,15 @@ def process_due_reminders(mark_overdue_after_minutes=60):
 @frappe.whitelist()
 def acknowledge(reminder):
 	doc = frappe.get_doc("Obligation Reminder", reminder)
+	user = frappe.session.user
+	privileged = {"System Manager", "Managing Partner"} & set(frappe.get_roles(user))
+	if user != doc.recipient and not privileged:
+		frappe.throw("Only the recipient (or a Managing Partner/System Manager) can acknowledge this reminder.")
 	if doc.status != "Delivered":
 		frappe.throw("Only a Delivered reminder can be acknowledged.")
 	doc.status = "Acknowledged"
 	doc.acknowledged_at = now_datetime()
-	doc.acknowledged_by = frappe.session.user
+	doc.acknowledged_by = user
 	doc.save(ignore_permissions=True)
 	return doc.name
 
