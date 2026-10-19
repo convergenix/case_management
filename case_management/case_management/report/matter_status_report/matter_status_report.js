@@ -22,9 +22,7 @@ frappe.query_reports["Matter Status Report"] = {
             "fieldtype": "Select",
             "default": "",
             "options": [
-                "", "Draft", "Open", "Pending Document", "Awaiting Filing",
-                "On-Hold", "Filed", "In Mediation/Arbitration",
-                "Awaiting Judgement/ Ruling", "Pending", "Closed"
+                "", "Open", "Active", "On Hold", "Closing", "Closed", "Archived"
             ]
         },
         {

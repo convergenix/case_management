@@ -25,7 +25,7 @@ frappe.query_reports["Matter Report"] = {
             "width": "80",
             "reqd": 0,
             "default": "",
-            "options": ["Closed", "Open"]
+            "options": ["", "Open", "Active", "On Hold", "Closing", "Closed", "Archived"]
         },{
             "fieldname": "matter",
             "label": __("Matter"),
