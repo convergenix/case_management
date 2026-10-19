@@ -118,6 +118,53 @@ class TestMatterAccessControl(FrappeTestCase):
 			self.addCleanup(frappe.delete_doc, "User", email, force=True)
 		return email
 
+	def test_responsible_solicitor_can_see_their_own_restricted_matter(self):
+		solicitor_user = self._make_outsider("test_responsible_solicitor@example.com")
+		template = frappe.get_doc("Employee", self._get_employee())
+		employee = frappe.get_doc({
+			"doctype": "Employee",
+			"employee_name": "Responsible Solicitor Under Test",
+			"status": "Active",
+			"user_id": solicitor_user,
+			"company": template.company,
+			"date_of_joining": template.date_of_joining,
+			"date_of_birth": template.date_of_birth,
+			"gender": template.gender,
+		}).insert(ignore_mandatory=True)
+		self.addCleanup(frappe.delete_doc, "Employee", employee.name, force=True)
+
+		intake = self._make_approved_intake("Solicitor Access")
+		customer = self._make_customer("Solicitor Access")
+		base_fields = self._matter_base_fields("Solicitor Access")
+		base_fields["responsible_solicitor"] = employee.name
+		matter = frappe.get_doc({
+			"doctype": "Matter",
+			"client": customer.name,
+			"intake": intake.name,
+			"status": "Open",
+			"is_restricted": 1,
+			**base_fields,
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
+		self.assertFalse(
+			frappe.db.exists("Matter Team Item", {"parent": matter.name, "employee": employee.name})
+		)
+
+		from case_management.case_management.doctype.matter.matter import (
+			get_permission_query_conditions,
+			has_permission,
+		)
+		self.assertTrue(has_permission(matter, user=solicitor_user))
+		self.assertIn(
+			matter.name,
+			frappe.db.sql_list(
+				"select name from `tabMatter` where name = %s and {0}".format(
+					get_permission_query_conditions(solicitor_user)
+				),
+				matter.name,
+			),
+		)
+
 	def test_restricted_matter_excluded_from_calendar_events(self):
 		from case_management.case_management.doctype.matter.matter import get_events
 

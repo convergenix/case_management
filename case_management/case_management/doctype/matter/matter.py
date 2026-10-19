@@ -137,6 +137,8 @@ def get_permission_query_conditions(user=None):
         select mti.parent from `tabMatter Team Item` mti
         inner join `tabEmployee` emp on emp.name = mti.employee
         where emp.user_id = {user}
+    ) or `tabMatter`.responsible_solicitor in (
+        select emp.name from `tabEmployee` emp where emp.user_id = {user}
     ))""".format(user=frappe.db.escape(user))
 
 
@@ -167,6 +169,8 @@ def has_permission(doc, user=None, permission_type=None):
     employee = frappe.db.get_value("Employee", {"user_id": user}, "name")
     if not employee:
         return False
+    if doc.responsible_solicitor == employee:
+        return True
     return bool(frappe.db.exists("Matter Team Item", {"parent": doc.name, "employee": employee}))
 
 
