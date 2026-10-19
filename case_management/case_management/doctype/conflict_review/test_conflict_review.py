@@ -64,3 +64,28 @@ class TestConflictReview(FrappeTestCase):
 
 		self.assertFalse(has_permission(review, user="test_ordinary_requester@example.com"))
 		self.assertTrue(has_permission(review, user="Administrator"))
+
+	def test_restricted_match_hidden_from_the_searcher_themselves(self):
+		client = self._make_party("Searcher Test Client")
+		adverse = self._make_party("Searcher Test Adversary")
+		intake = self._make_intake(client, adverse)
+
+		test_user = frappe.get_doc({
+			"doctype": "User",
+			"email": "test_non_privileged_searcher@example.com",
+			"first_name": "Test Searcher",
+			"send_welcome_email": 0,
+		}).insert(ignore_permissions=True)
+		self.addCleanup(frappe.delete_doc, "User", test_user.name, force=True, ignore_permissions=True)
+
+		review = frappe.get_doc({
+			"doctype": "Conflict Review",
+			"intake": intake.name,
+			"party_set_hash": intake.get_party_set_hash(),
+			"search_timestamp": frappe.utils.now_datetime(),
+			"searched_by": test_user.name,
+			"decision": "Restricted Match - Escalated",
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Conflict Review", review.name, force=True)
+
+		self.assertFalse(has_permission(review, user=test_user.name))

@@ -56,6 +56,6 @@ def has_permission(doc, user=None, permission_type=None):
 		user = frappe.session.user
 	if PRIVILEGED_ROLES & set(frappe.get_roles(user)):
 		return True
-	if doc.decision == "Restricted Match - Escalated" and doc.searched_by != user:
+	if doc.decision == "Restricted Match - Escalated":
 		return False
 	return True
