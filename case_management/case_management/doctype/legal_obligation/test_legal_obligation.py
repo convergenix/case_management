@@ -74,6 +74,18 @@ class TestLegalObligation(FrappeTestCase):
 		self.addCleanup(frappe.delete_doc, "Legal Obligation", obligation.name, force=True)
 		return obligation
 
+	def _make_plain_user(self, email):
+		if not frappe.db.exists("User", email):
+			frappe.get_doc({
+				"doctype": "User",
+				"email": email,
+				"first_name": "Obligation Test",
+				"send_welcome_email": 0,
+				"roles": [{"role": "Lawyer Manager"}],
+			}).insert(ignore_permissions=True)
+			self.addCleanup(frappe.delete_doc, "User", email, force=True)
+		return email
+
 	def test_new_obligation_defaults_to_proposed(self):
 		obligation = self._make_matter_and_obligation()
 		self.assertEqual(obligation.status, "Proposed")
@@ -262,3 +274,52 @@ class TestLegalObligation(FrappeTestCase):
 		obligation = self._make_matter_and_obligation(status="Verified", is_critical=0)
 		self.assertEqual(obligation.status, "Verified")
 		self.assertEqual(obligation.verified_by, "Administrator")
+
+	def test_marking_an_already_verified_obligation_critical_requires_a_verifier(self):
+		obligation = self._make_matter_and_obligation(is_critical=0)
+		obligation.status = "Verified"
+		obligation.save()
+
+		obligation.is_critical = 1
+		with self.assertRaises(frappe.ValidationError):
+			obligation.save()
+
+	def test_only_the_named_verifier_can_perform_the_verified_transition(self):
+		verifier = self._make_plain_user("obligation_named_verifier@example.com")
+		impostor = self._make_plain_user("obligation_impostor@example.com")
+		obligation = self._make_matter_and_obligation(is_critical=1, verifier=verifier)
+
+		obligation.status = "Verified"
+		frappe.set_user(impostor)
+		try:
+			with self.assertRaises(frappe.ValidationError) as caught:
+				obligation.save()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertIn("Only the named Verifier", str(caught.exception))
+
+	def test_verifier_must_be_independent_of_the_owner(self):
+		obligation = self._make_matter_and_obligation(is_critical=1, verifier="Administrator")
+		self.assertEqual(obligation.responsible_user, "Administrator")
+
+		obligation.status = "Verified"
+		with self.assertRaises(frappe.ValidationError) as caught:
+			obligation.save()
+		self.assertIn("independent", str(caught.exception))
+
+	def test_second_reschedule_requires_its_own_fresh_reason(self):
+		obligation = self._make_matter_and_obligation(is_critical=0)
+		obligation.status = "Verified"
+		obligation.save()
+		obligation.status = "Active"
+		obligation.save()
+
+		original_due_date = obligation.due_date
+		obligation.due_date = add_days(original_due_date, 7)
+		obligation.reschedule_reason = "Court granted an extension"
+		obligation.save()
+		self.assertFalse(frappe.db.get_value("Legal Obligation", obligation.name, "reschedule_reason"))
+
+		obligation.due_date = add_days(original_due_date, 14)
+		with self.assertRaises(frappe.ValidationError):
+			obligation.save()

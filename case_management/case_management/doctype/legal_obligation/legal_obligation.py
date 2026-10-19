@@ -34,10 +34,6 @@ class LegalObligation(Document):
 					f"Cannot move Legal Obligation from {previous_status} to {self.status}."
 				)
 			if self.status == "Verified":
-				if self.is_critical and not self.verifier:
-					frappe.throw(
-						"Critical obligations require a Verifier before they can be Verified."
-					)
 				self.verified_by = frappe.session.user
 				self.verified_on = now_datetime()
 			if self.status == "Completed":
@@ -48,6 +44,29 @@ class LegalObligation(Document):
 				self.completed_by = frappe.session.user
 				self.completed_on = now_datetime()
 
+		# Checked unconditionally rather than only on transition: otherwise
+		# is_critical can be flipped to 1 on a save that doesn't also change
+		# status, which never re-enters the transition-gated block above.
+		if self.is_critical and self.status in ("Verified", "Active"):
+			if not self.verifier:
+				frappe.throw(
+					"Critical obligations require a Verifier before they can be Verified or Active."
+				)
+			if self.verifier == self.responsible_user:
+				frappe.throw(
+					"The Verifier must be independent of the obligation's Owner."
+				)
+
+		# The gate above only checks that a verifier is NAMED; this checks that
+		# the right person is the one acting.
+		if previous_status != self.status and self.status == "Verified":
+			privileged = {"System Manager", "Managing Partner"} & set(frappe.get_roles(frappe.session.user))
+			if frappe.session.user != self.verifier and not privileged:
+				frappe.throw(
+					"Only the named Verifier (or a Managing Partner/System Manager) "
+					"can move this obligation to Verified."
+				)
+
 		if previous_due_date and self.due_date and str(previous_due_date) != str(self.due_date):
 			if previous_status in ("Verified", "Active"):
 				if not self.reschedule_reason:
@@ -56,3 +75,6 @@ class LegalObligation(Document):
 						"in 'Reschedule Reason'."
 					)
 				self.previous_due_date = previous_due_date
+				# Cleared once captured for THIS reschedule, so a later one
+				# can't pass this gate on stale text from an earlier one.
+				self.reschedule_reason = None
