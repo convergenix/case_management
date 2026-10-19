@@ -63,6 +63,7 @@ fixtures = ["Custom Field", "Role", "Translation", "Folder", "Folder Structure",
 
 permission_query_conditions = {
 	"Matter": "case_management.case_management.doctype.matter.matter.get_permission_query_conditions",
+	"Conflict Review": "case_management.case_management.doctype.conflict_review.conflict_review.get_permission_query_conditions",
 }
 
 has_permission = {

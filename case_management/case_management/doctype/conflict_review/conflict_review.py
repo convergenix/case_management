@@ -51,6 +51,14 @@ def run_conflict_search(intake):
 	return review.name
 
 
+def get_permission_query_conditions(user=None):
+	if not user:
+		user = frappe.session.user
+	if PRIVILEGED_ROLES & set(frappe.get_roles(user)):
+		return ""
+	return "ifnull(`tabConflict Review`.decision, '') != 'Restricted Match - Escalated'"
+
+
 def has_permission(doc, user=None, permission_type=None):
 	if not user:
 		user = frappe.session.user

@@ -8,6 +8,18 @@ from case_management.case_management.doctype.conflict_review.conflict_review imp
 )
 
 
+def _make_user(testcase, email):
+	if not frappe.db.exists("User", email):
+		frappe.get_doc({
+			"doctype": "User",
+			"email": email,
+			"first_name": "Conflict Test",
+			"send_welcome_email": 0,
+		}).insert(ignore_permissions=True)
+		testcase.addCleanup(frappe.delete_doc, "User", email, force=True, ignore_permissions=True)
+	return email
+
+
 class TestConflictReview(FrappeTestCase):
 	def _make_party(self, name, identifier=None):
 		party = frappe.get_doc({
@@ -64,6 +76,39 @@ class TestConflictReview(FrappeTestCase):
 
 		self.assertFalse(has_permission(review, user="test_ordinary_requester@example.com"))
 		self.assertTrue(has_permission(review, user="Administrator"))
+
+	def _make_review(self, intake, decision):
+		review = frappe.get_doc({
+			"doctype": "Conflict Review",
+			"intake": intake.name,
+			"party_set_hash": intake.get_party_set_hash(),
+			"search_timestamp": frappe.utils.now_datetime(),
+			"searched_by": "Administrator",
+			"decision": decision,
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Conflict Review", review.name, force=True)
+		return review
+
+	def test_escalated_review_excluded_from_list_for_non_privileged_user(self):
+		client = self._make_party("List Gate Client")
+		adverse = self._make_party("List Gate Adversary")
+		intake = self._make_intake(client, adverse)
+		escalated = self._make_review(intake, "Restricted Match - Escalated")
+		cleared = self._make_review(intake, "Clear")
+		user = _make_user(self, "test_conflict_list_outsider@example.com")
+
+		frappe.set_user(user)
+		try:
+			visible = frappe.get_list(
+				"Conflict Review",
+				filters={"name": ["in", [escalated.name, cleared.name]]},
+				pluck="name",
+			)
+		finally:
+			frappe.set_user("Administrator")
+
+		self.assertNotIn(escalated.name, visible)
+		self.assertIn(cleared.name, visible)
 
 	def test_restricted_match_hidden_from_the_searcher_themselves(self):
 		client = self._make_party("Searcher Test Client")
