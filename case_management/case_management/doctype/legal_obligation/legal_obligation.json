@@ -28,6 +28,7 @@
   "verified_on",
   "sb_reschedule",
   "previous_due_date",
+  "last_reminder_sync_date",
   "reschedule_reason",
   "sb_completion",
   "completion_evidence",
@@ -169,6 +170,12 @@
    "label": "Previous Due Date",
    "no_copy": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "last_reminder_sync_date",
+   "fieldtype": "Date",
+   "label": "Last Reminder Sync Date",
+   "no_copy": 1
   },
   {
    "description": "Required when changing Due Date after the obligation has been Verified or Active.",
