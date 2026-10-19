@@ -91,6 +91,13 @@ Run reminders through Frappe's scheduler with an outbox-style durability check: 
 
 Acceptance for M2 mirrors the source plan's scenario matrix: a rescheduled date preserves the old date and reason and invalidates obsolete reminders; a stopped scheduler and its recovery are both detected; completing a reminder does not complete the underlying filing.
 
+### Known M2 limitations surfaced by final review
+
+Two gaps were identified in the final whole-branch review of M2. Neither is a defect against the M2 table above, and neither is fixed in the branch — both are decisions for a human to make before production use, recorded here so they stay visible rather than being mistaken for finished work.
+
+- **`Legal Obligation` has no append-only transition history.** M1 introduced `Matter State Log` precisely because an unauditable status field was flagged as a defect in the original R0 inventory, but the M2 table does not require an equivalent for obligations, so none was built. The state machine as implemented permits cancelling a critical court deadline with no evidence and no durable record of who cancelled it or why — only the current `status` and the `verified_by`/`completed_by` stamps survive. Whether that is acceptable, or whether obligations need the same append-only log M1 established, should be decided deliberately.
+- **`due_time`, `date_only` and `timezone` are collected but never consumed.** `generate_default_reminders` computes reminder times from `due_date` alone and always schedules at midnight local, regardless of these three fields. The M2 table lists "date-only vs. time-specific semantics, timezone" among the key invariants, so the fields exist and are editable, but they are currently decorative: a 9:00 AM hearing in another timezone produces exactly the same reminder schedule as an all-day filing deadline. This needs either real implementation or an explicit decision to defer, on the same footing as the other documented M2 simplifications.
+
 ## M3 — Thin Billing Slice
 
 Scope is deliberately narrow — just enough to validate the plan's financial-conservation invariants end to end, not the full billing module (that's a separate future spec covering the rest of the plan's R2 workstream):
