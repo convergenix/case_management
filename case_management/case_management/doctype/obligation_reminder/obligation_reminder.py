@@ -81,15 +81,28 @@ def process_due_reminders(mark_overdue_after_minutes=60):
 		filters={"status": "Queued", "scheduled_for": ["<=", now]},
 		fields=["name", "scheduled_for"],
 	)
+	processed = 0
 	for row in due:
-		minutes_late = (now - get_datetime(row.scheduled_for)).total_seconds() / 60
-		doc = frappe.get_doc("Obligation Reminder", row.name)
-		doc.status = "Delivered"
-		doc.delivered_at = now
-		if minutes_late > mark_overdue_after_minutes:
-			doc.is_overdue = 1
-		doc.save(ignore_permissions=True)
-	return len(due)
+		# Atomic claim: only one process can win the Queued -> Delivered flip for
+		# a given row, so the routine cron tick and an outage-recovery call
+		# cannot both deliver the same reminder.
+		frappe.db.sql(
+			"""update `tabObligation Reminder`
+			   set status='Delivered', delivered_at=%(now)s
+			   where name=%(name)s and status='Queued'""",
+			{"now": now, "name": row.name},
+		)
+		claimed = frappe.db.sql("select ROW_COUNT()")[0][0]
+		if not claimed:
+			continue
+		try:
+			minutes_late = (now - get_datetime(row.scheduled_for)).total_seconds() / 60
+			if minutes_late > mark_overdue_after_minutes:
+				frappe.db.set_value("Obligation Reminder", row.name, "is_overdue", 1, update_modified=False)
+			processed += 1
+		except Exception:
+			frappe.log_error(title=f"process_due_reminders: failed to finish processing {row.name}")
+	return processed
 
 
 @frappe.whitelist()
