@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import now_datetime, nowdate
+from case_management.case_management.doctype.matter.matter import REOPEN_ROLES, reopen, resolve
 
 
 class TestMatterLifecycle(FrappeTestCase):
@@ -149,6 +150,75 @@ class TestMatterLifecycle(FrappeTestCase):
 		matter.status = "Closed"
 		with self.assertRaises(frappe.ValidationError):
 			matter.save()
+
+	def _make_matter(self, label):
+		intake = self._make_approved_intake(label)
+		customer = self._make_customer(label)
+		matter = frappe.get_doc({
+			"doctype": "Matter",
+			"client": customer.name,
+			"intake": intake.name,
+			"status": "Open",
+			**self._matter_base_fields(label),
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
+		return matter
+
+	def test_resolve_endpoint_closes_a_closing_matter_and_logs_the_transition(self):
+		matter = self._make_matter("Resolve Endpoint")
+		matter.status = "Active"
+		matter.save()
+		matter.status = "Closing"
+		matter.save()
+
+		resolve("Matter", matter.name)
+
+		matter.reload()
+		self.assertEqual(matter.status, "Closed")
+		self.assertEqual(matter.state_log[-1].previous_state, "Closing")
+		self.assertEqual(matter.state_log[-1].new_state, "Closed")
+
+	def test_resolve_endpoint_cannot_skip_the_state_machine(self):
+		matter = self._make_matter("Resolve Bypass")
+
+		with self.assertRaises(frappe.ValidationError):
+			resolve("Matter", matter.name)
+
+		matter.reload()
+		self.assertEqual(matter.status, "Open")
+
+	def test_reopen_endpoint_without_a_reason_is_rejected(self):
+		matter = self._make_matter("Reopen Endpoint No Reason")
+		matter.status = "Active"
+		matter.save()
+		matter.status = "Closing"
+		matter.save()
+		matter.status = "Closed"
+		matter.save()
+
+		with self.assertRaises(frappe.ValidationError):
+			reopen("Matter", matter.name)
+
+		matter.reload()
+		self.assertEqual(matter.status, "Closed")
+
+	def test_reopen_endpoint_with_a_reason_reactivates_and_logs_the_transition(self):
+		matter = self._make_matter("Reopen Endpoint With Reason")
+		matter.status = "Active"
+		matter.save()
+		matter.status = "Closing"
+		matter.save()
+		matter.status = "Closed"
+		matter.save()
+
+		self.assertTrue(REOPEN_ROLES & set(frappe.get_roles(frappe.session.user)))
+		reopen("Matter", matter.name, reason="Client reinstated the engagement.")
+
+		matter.reload()
+		self.assertEqual(matter.status, "Active")
+		self.assertEqual(matter.state_log[-1].previous_state, "Closed")
+		self.assertEqual(matter.state_log[-1].new_state, "Active")
+		self.assertEqual(matter.state_log[-1].reason, "Client reinstated the engagement.")
 
 	def test_reopen_requires_reason(self):
 		intake = self._make_approved_intake("Reopen Flow")

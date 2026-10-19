@@ -366,12 +366,17 @@ def timesheet_update(doc, method):
 
 @frappe.whitelist()
 def resolve(doctype, docname):
-    # update without checking permissions
-    frappe.db.sql("update `tab%s` set status = 'Closed' , docstatus=1 where name = '%s'" % (doctype, docname))
+    doc = frappe.get_doc(doctype, docname)
+    doc.status = "Closed"
+    doc.save()
     return True
 
+
 @frappe.whitelist()
-def reopen(doctype, docname):
-    # update without checking permissions
-    frappe.db.sql("update `tab%s` set status = 'Open' , docstatus=0 where name = '%s'" % (doctype, docname))
+def reopen(doctype, docname, reason=None):
+    doc = frappe.get_doc(doctype, docname)
+    doc.status = "Active"
+    if reason:
+        doc.reopen_reason = reason
+    doc.save()
     return True

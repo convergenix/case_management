@@ -51,7 +51,9 @@ frappe.ui.form.on('Matter', {
              // Close Matter
              // console.log(frappe.user.name)
             if ((frappe.user.name == cur_frm.doc.owner || frappe.user_roles.includes("Practice Manager")) || frappe.user.name == "Administrator") {
-                if (cur_frm.doc.status != "Closed") {
+                // "Closing" is the only state the state machine allows Closed to be
+                // reached from, so the button is hidden everywhere else.
+                if (cur_frm.doc.status == "Closing") {
                     frm.add_custom_button(__('Close Matter'), function () {
                         frappe.confirm("Are you sure you want to close this this matter?", function () {
                             frappe.call({
@@ -68,18 +70,26 @@ frappe.ui.form.on('Matter', {
                     }).css({"background-color": "rgb(197, 22, 22)", "color": 'white', "font-weight": 'bold'});
                 }
 
-                if (cur_frm.doc.status == "Closed" && frappe.user_roles.includes("Practice Manager")) {
+                if (["Closed", "Archived"].includes(cur_frm.doc.status) && frappe.user_roles.includes("Practice Manager")) {
                     frm.add_custom_button(__('Reopen'), function () {
-                        frappe.call({
-                            method: "case_management.case_management.doctype.matter.matter.reopen",
-                            args: {
-                                doctype: cur_frm.doctype,
-                                docname: cur_frm.docname
-                            },
-                            callback: function (message) {
-                                cur_frm.reload_doc()
-                            }
-                        })
+                        frappe.prompt([{
+                            fieldname: "reason",
+                            label: __("Reopen Reason"),
+                            fieldtype: "Small Text",
+                            reqd: 1
+                        }], function (values) {
+                            frappe.call({
+                                method: "case_management.case_management.doctype.matter.matter.reopen",
+                                args: {
+                                    doctype: cur_frm.doctype,
+                                    docname: cur_frm.docname,
+                                    reason: values.reason
+                                },
+                                callback: function (message) {
+                                    cur_frm.reload_doc()
+                                }
+                            })
+                        }, __("Reopen Matter"), __("Reopen"));
                     }).css({"background-color": "rgb(17,122, 22)", "color": 'white', "font-weight": 'bold'});
                 }
             }
