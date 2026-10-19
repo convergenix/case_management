@@ -118,7 +118,11 @@ doc_events = {
 scheduler_events = {
 	"cron": {
 		"*/10 * * * *": [
-			"case_management.case_management.doctype.obligation_reminder.obligation_reminder.process_due_reminders"
+			"case_management.case_management.doctype.obligation_reminder.obligation_reminder.process_due_reminders",
+			"case_management.case_management.doctype.scheduler_heartbeat.scheduler_heartbeat.record_heartbeat"
+		],
+		"*/30 * * * *": [
+			"case_management.case_management.doctype.scheduler_heartbeat.scheduler_heartbeat.check_for_outage"
 		]
 	}
 }
