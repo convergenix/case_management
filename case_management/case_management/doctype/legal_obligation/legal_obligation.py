@@ -18,17 +18,20 @@ TRANSITIONS = {
 class LegalObligation(Document):
 	def validate(self):
 		if self.is_new():
+			previous_status = "Proposed"
+			previous_due_date = None
 			self.status = self.status or "Proposed"
-			return
+		else:
+			previous = frappe.db.get_value(
+				"Legal Obligation", self.name, ["status", "due_date"], as_dict=True
+			)
+			previous_status = previous.status
+			previous_due_date = previous.due_date
 
-		previous = frappe.db.get_value(
-			"Legal Obligation", self.name, ["status", "due_date"], as_dict=True
-		)
-
-		if previous.status != self.status:
-			if self.status not in TRANSITIONS.get(previous.status, set()):
+		if previous_status != self.status:
+			if self.status not in TRANSITIONS.get(previous_status, set()):
 				frappe.throw(
-					f"Cannot move Legal Obligation from {previous.status} to {self.status}."
+					f"Cannot move Legal Obligation from {previous_status} to {self.status}."
 				)
 			if self.status == "Verified":
 				if self.is_critical and not self.verifier:
@@ -45,11 +48,11 @@ class LegalObligation(Document):
 				self.completed_by = frappe.session.user
 				self.completed_on = now_datetime()
 
-		if previous.due_date and self.due_date and str(previous.due_date) != str(self.due_date):
-			if previous.status in ("Verified", "Active"):
+		if previous_due_date and self.due_date and str(previous_due_date) != str(self.due_date):
+			if previous_status in ("Verified", "Active"):
 				if not self.reschedule_reason:
 					frappe.throw(
 						"Rescheduling a Verified/Active obligation requires a reason "
 						"in 'Reschedule Reason'."
 					)
-				self.previous_due_date = previous.due_date
+				self.previous_due_date = previous_due_date

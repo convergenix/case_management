@@ -118,3 +118,147 @@ class TestLegalObligation(FrappeTestCase):
 		obligation.save()
 		self.assertEqual(obligation.status, "Completed")
 		self.assertEqual(obligation.completed_by, "Administrator")
+
+	def test_direct_creation_with_verified_critical_without_verifier_fails(self):
+		customer = frappe.get_doc({
+			"doctype": "Customer",
+			"customer_name": "Direct Create Test Customer",
+			"customer_type": "Company",
+		}).insert(ignore_mandatory=True)
+		self.addCleanup(frappe.delete_doc, "Customer", customer.name, force=True)
+
+		client = frappe.get_doc({
+			"doctype": "Legal Party",
+			"party_name": "Direct Create Test Client",
+			"party_type": "Organization",
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Legal Party", client.name, force=True)
+
+		intake = frappe.get_doc({
+			"doctype": "Intake",
+			"proposed_client": client.name,
+			"scope": "Advisory",
+			"parties": [{"legal_party": client.name, "role": "Proposed Client"}],
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Intake", intake.name, force=True)
+
+		from case_management.case_management.doctype.conflict_review.conflict_review import run_conflict_search
+		review_name = run_conflict_search(intake.name)
+		self.addCleanup(frappe.delete_doc, "Conflict Review", review_name, force=True)
+		review = frappe.get_doc("Conflict Review", review_name)
+		review.decision = "Clear"
+		review.save()
+
+		intake.status = "Under Review"
+		intake.save()
+		intake.status = "Approved"
+		intake.save()
+
+		practice_area = frappe.get_doc({"doctype": "Practice Area", "practice_area": "Direct Create Test Practice Area"}).insert()
+		self.addCleanup(frappe.delete_doc, "Practice Area", practice_area.name, force=True)
+
+		employee = frappe.db.get_value("Employee", {}, "name")
+		if not employee:
+			employee = frappe.get_doc({
+				"doctype": "Employee", "employee_name": "Direct Create Test Solicitor", "status": "Active",
+			}).insert(ignore_mandatory=True).name
+
+		matter = frappe.get_doc({
+			"doctype": "Matter",
+			"client": customer.name,
+			"intake": intake.name,
+			"status": "Open",
+			"open_date": nowdate(),
+			"practice_area": practice_area.name,
+			"transaction": "Direct Create Test Transaction",
+			"responsible_solicitor": employee,
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
+
+		fields = {
+			"doctype": "Legal Obligation",
+			"matter": matter.name,
+			"obligation_type": "Filing Deadline",
+			"due_date": add_days(nowdate(), 14),
+			"responsible_user": "Administrator",
+			"status": "Verified",
+			"is_critical": 1,
+		}
+		obligation = frappe.get_doc(fields)
+		self.addCleanup(frappe.delete_doc, "Legal Obligation", obligation.name, force=True, ignore_missing=True)
+		with self.assertRaises(frappe.ValidationError):
+			obligation.insert()
+
+	def test_direct_creation_with_active_status_fails(self):
+		customer = frappe.get_doc({
+			"doctype": "Customer",
+			"customer_name": "Active Create Test Customer",
+			"customer_type": "Company",
+		}).insert(ignore_mandatory=True)
+		self.addCleanup(frappe.delete_doc, "Customer", customer.name, force=True)
+
+		client = frappe.get_doc({
+			"doctype": "Legal Party",
+			"party_name": "Active Create Test Client",
+			"party_type": "Organization",
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Legal Party", client.name, force=True)
+
+		intake = frappe.get_doc({
+			"doctype": "Intake",
+			"proposed_client": client.name,
+			"scope": "Advisory",
+			"parties": [{"legal_party": client.name, "role": "Proposed Client"}],
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Intake", intake.name, force=True)
+
+		from case_management.case_management.doctype.conflict_review.conflict_review import run_conflict_search
+		review_name = run_conflict_search(intake.name)
+		self.addCleanup(frappe.delete_doc, "Conflict Review", review_name, force=True)
+		review = frappe.get_doc("Conflict Review", review_name)
+		review.decision = "Clear"
+		review.save()
+
+		intake.status = "Under Review"
+		intake.save()
+		intake.status = "Approved"
+		intake.save()
+
+		practice_area = frappe.get_doc({"doctype": "Practice Area", "practice_area": "Active Create Test Practice Area"}).insert()
+		self.addCleanup(frappe.delete_doc, "Practice Area", practice_area.name, force=True)
+
+		employee = frappe.db.get_value("Employee", {}, "name")
+		if not employee:
+			employee = frappe.get_doc({
+				"doctype": "Employee", "employee_name": "Active Create Test Solicitor", "status": "Active",
+			}).insert(ignore_mandatory=True).name
+
+		matter = frappe.get_doc({
+			"doctype": "Matter",
+			"client": customer.name,
+			"intake": intake.name,
+			"status": "Open",
+			"open_date": nowdate(),
+			"practice_area": practice_area.name,
+			"transaction": "Active Create Test Transaction",
+			"responsible_solicitor": employee,
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
+
+		fields = {
+			"doctype": "Legal Obligation",
+			"matter": matter.name,
+			"obligation_type": "Filing Deadline",
+			"due_date": add_days(nowdate(), 14),
+			"responsible_user": "Administrator",
+			"status": "Active",
+		}
+		obligation = frappe.get_doc(fields)
+		self.addCleanup(frappe.delete_doc, "Legal Obligation", obligation.name, force=True, ignore_missing=True)
+		with self.assertRaises(frappe.ValidationError):
+			obligation.insert()
+
+	def test_direct_creation_with_verified_non_critical_succeeds(self):
+		obligation = self._make_matter_and_obligation(status="Verified", is_critical=0)
+		self.assertEqual(obligation.status, "Verified")
+		self.assertEqual(obligation.verified_by, "Administrator")
