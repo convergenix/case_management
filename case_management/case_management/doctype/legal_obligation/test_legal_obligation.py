@@ -324,6 +324,18 @@ class TestLegalObligation(FrappeTestCase):
 			frappe.set_user("Administrator")
 		self.assertIn("Only the named Verifier", str(caught.exception))
 
+	def test_non_critical_obligation_without_a_verifier_can_be_verified_by_a_plain_user(self):
+		plain_user = self._make_plain_user("obligation_plain_verifier@example.com")
+		obligation = self._make_matter_and_obligation(is_critical=0)
+
+		obligation.status = "Verified"
+		frappe.set_user(plain_user)
+		try:
+			obligation.save()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(obligation.status, "Verified")
+
 	def test_verifier_must_be_independent_of_the_owner(self):
 		obligation = self._make_matter_and_obligation(is_critical=1, verifier="Administrator")
 		self.assertEqual(obligation.responsible_user, "Administrator")

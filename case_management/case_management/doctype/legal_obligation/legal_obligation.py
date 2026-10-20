@@ -66,8 +66,11 @@ class LegalObligation(Document):
 				)
 
 		# The gate above only checks that a verifier is NAMED; this checks that
-		# the right person is the one acting.
-		if previous_status != self.status and self.status == "Verified":
+		# the right person is the one acting. Scoped to critical obligations
+		# only -- non-critical ones revert to ordinary write-permission-gated
+		# access, which can be adjusted later via normal role permissions
+		# rather than this hardcoded identity check.
+		if previous_status != self.status and self.status == "Verified" and self.is_critical:
 			privileged = {"System Manager", "Managing Partner"} & set(frappe.get_roles(frappe.session.user))
 			if frappe.session.user != self.verifier and not privileged:
 				frappe.throw(
