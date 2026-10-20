@@ -366,6 +366,10 @@ class TestLegalObligation(FrappeTestCase):
 		obligation.reschedule_reason = "Court granted an extension"
 		obligation.save()
 		self.assertFalse(frappe.db.get_value("Legal Obligation", obligation.name, "reschedule_reason"))
+		self.assertEqual(
+			frappe.db.get_value("Legal Obligation", obligation.name, "previous_reschedule_reason"),
+			"Court granted an extension",
+		)
 
 		obligation.due_date = add_days(original_due_date, 14)
 		with self.assertRaises(frappe.ValidationError):

@@ -30,6 +30,7 @@
   "previous_due_date",
   "last_reminder_sync_date",
   "reschedule_reason",
+  "previous_reschedule_reason",
   "sb_completion",
   "completion_evidence",
   "completed_by",
@@ -185,6 +186,13 @@
    "fieldtype": "Small Text",
    "label": "Reschedule Reason",
    "no_copy": 1
+  },
+  {
+   "fieldname": "previous_reschedule_reason",
+   "fieldtype": "Small Text",
+   "label": "Previous Reschedule Reason",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "fieldname": "sb_completion",

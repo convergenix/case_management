@@ -83,8 +83,12 @@ class LegalObligation(Document):
 						"in 'Reschedule Reason'."
 					)
 				self.previous_due_date = previous_due_date
-				# Cleared once captured for THIS reschedule, so a later one
-				# can't pass this gate on stale text from an earlier one.
+				# Preserve the reason that justified THIS reschedule before
+				# clearing the working field, so a later reschedule can't
+				# pass the gate on stale text AND the original reason stays
+				# auditable (spec requires preserving "the old date and
+				# reason").
+				self.previous_reschedule_reason = self.reschedule_reason
 				self.reschedule_reason = None
 
 
