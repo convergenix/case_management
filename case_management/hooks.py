@@ -66,6 +66,7 @@ permission_query_conditions = {
 	"Conflict Review": "case_management.case_management.doctype.conflict_review.conflict_review.get_permission_query_conditions",
 	"Legal Obligation": "case_management.case_management.doctype.legal_obligation.legal_obligation.get_permission_query_conditions",
 	"Obligation Reminder": "case_management.case_management.doctype.obligation_reminder.obligation_reminder.get_permission_query_conditions",
+	"Fee Note": "case_management.case_management.doctype.fee_note.fee_note.get_permission_query_conditions",
 }
 
 has_permission = {
@@ -73,6 +74,7 @@ has_permission = {
 	"Conflict Review": "case_management.case_management.doctype.conflict_review.conflict_review.has_permission",
 	"Legal Obligation": "case_management.case_management.doctype.legal_obligation.legal_obligation.has_permission",
 	"Obligation Reminder": "case_management.case_management.doctype.obligation_reminder.obligation_reminder.has_permission",
+	"Fee Note": "case_management.case_management.doctype.fee_note.fee_note.has_permission",
 }
 
 # Document Events
