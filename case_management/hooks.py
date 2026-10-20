@@ -44,7 +44,15 @@ app_license = "MIT"
 
 # Fixtures
 #fixtures = ['Custom Field', 'Translation']
-fixtures = ["Custom Field", "Role", "Translation", "Folder", "Folder Structure", "Naming Series"]
+fixtures = [
+	"Custom Field",
+	"Role",
+	"Translation",
+	"Folder",
+	"Folder Structure",
+	"Naming Series",
+	{"dt": "Custom HTML Block", "filters": [["name", "=", "LawERP Module Grid"]]},
+]
 # Installation
 # ------------
 
