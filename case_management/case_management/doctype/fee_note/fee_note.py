@@ -31,6 +31,10 @@ class FeeNote(Document):
 		if previous_status != self.status:
 			if self.status not in TRANSITIONS.get(previous_status, set()):
 				frappe.throw(f"Cannot move Fee Note from {previous_status} to {self.status}.")
+			if previous_status == "Approved" and self.compute_content_hash() != previous.approved_hash:
+				frappe.throw(
+					"This Fee Note has changed since it was approved; re-approve before converting or superseding."
+				)
 			if self.status == "Approved":
 				self.approved_by = frappe.session.user
 				self.approved_on = now_datetime()
@@ -48,9 +52,9 @@ class FeeNote(Document):
 
 	def compute_content_hash(self):
 		parts = sorted(
-			f"{row.time_entry}:{row.hours}:{row.rate}:{row.amount}" for row in self.lines
+			f"{row.time_entry}:{flt(row.hours)}:{flt(row.rate)}:{flt(row.amount)}" for row in self.lines
 		)
-		raw = "|".join(parts) + f"|{self.matter}|total:{self.total_amount}"
+		raw = "|".join(parts) + f"|{self.matter}|total:{flt(self.total_amount)}"
 		return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 

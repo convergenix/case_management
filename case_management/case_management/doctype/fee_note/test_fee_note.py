@@ -130,3 +130,43 @@ class TestFeeNote(FrappeTestCase):
 
 		self.assertNotEqual(fee_note.status, "Approved")
 		self.assertEqual(fee_note.status, "Finance Review")
+
+	def test_converting_an_approved_fee_note_with_stale_hash_is_rejected(self):
+		matter, entry = self._make_matter_with_approved_time()
+		fee_note = self._make_fee_note(matter, entry)
+		fee_note.status = "Partner Review"
+		fee_note.save()
+		fee_note.status = "Finance Review"
+		fee_note.save()
+		fee_note.status = "Approved"
+		fee_note.save()
+
+		fee_note.lines[0].amount = float(fee_note.lines[0].amount) + 100
+		fee_note.status = "Converted"
+		with self.assertRaises(frappe.ValidationError):
+			fee_note.save()
+
+	def test_hash_is_stable_across_int_and_float_numeric_types(self):
+		matter, entry = self._make_matter_with_approved_time()
+		fee_note = frappe.get_doc({
+			"doctype": "Fee Note",
+			"matter": matter.name,
+			"cutoff_date": nowdate(),
+			"lines": [{
+				"time_entry": entry.name,
+				"hours": 2,
+				"rate": 80000,
+				"amount": 160000,
+			}],
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Fee Note", fee_note.name, force=True)
+
+		fee_note.status = "Partner Review"
+		fee_note.save()
+		fee_note.status = "Finance Review"
+		fee_note.save()
+		fee_note.status = "Approved"
+		fee_note.save()
+
+		reloaded = frappe.get_doc("Fee Note", fee_note.name)
+		self.assertEqual(reloaded.compute_content_hash(), reloaded.approved_hash)
