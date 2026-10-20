@@ -39,6 +39,9 @@ class FeeNote(Document):
 				self.approved_by = frappe.session.user
 				self.approved_on = now_datetime()
 				self.approved_hash = self.compute_content_hash()
+				self._reserve_lines()
+			if previous_status == "Approved" and self.status in ("Superseded",):
+				self._release_lines()
 		elif previous_status == "Approved" and not self.is_new():
 			# A material edit to an already-Approved note (content changed
 			# without an explicit status transition) invalidates the
@@ -49,6 +52,29 @@ class FeeNote(Document):
 				self.approved_hash = None
 				self.approved_by = None
 				self.approved_on = None
+				self._release_lines()
+
+	def _reserve_lines(self):
+		for row in self.lines:
+			frappe.db.sql(
+				"""update `tabTime Tracking` set wip_status='Reserved', fee_note=%(fee_note)s
+				   where name=%(name)s and wip_status='Approved'""",
+				{"fee_note": self.name, "name": row.time_entry},
+			)
+			claimed = frappe.db.sql("select ROW_COUNT()")[0][0]
+			if not claimed:
+				frappe.throw(
+					f"Time entry {row.time_entry} is no longer available for billing "
+					f"(already reserved, billed, or written off elsewhere)."
+				)
+
+	def _release_lines(self):
+		for row in self.lines:
+			frappe.db.sql(
+				"""update `tabTime Tracking` set wip_status='Approved', fee_note=NULL
+				   where name=%(name)s and wip_status='Reserved' and fee_note=%(fee_note)s""",
+				{"name": row.time_entry, "fee_note": self.name},
+			)
 
 	def compute_content_hash(self):
 		parts = sorted(
