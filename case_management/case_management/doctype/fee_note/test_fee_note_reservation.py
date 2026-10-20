@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import nowdate
+from frappe.utils import flt, nowdate
 
 
 class TestFeeNoteReservation(FrappeTestCase):
@@ -124,3 +124,42 @@ class TestFeeNoteReservation(FrappeTestCase):
 
 		self.assertEqual(frappe.db.get_value("Time Tracking", entry.name, "wip_status"), "Approved")
 		self.assertFalse(frappe.db.get_value("Time Tracking", entry.name, "fee_note"))
+
+	def test_removing_a_line_from_an_approved_fee_note_still_releases_its_reservation(self):
+		matter, entry_one = self._make_matter_with_approved_time(label="Removed Line Test")
+
+		entry_two = frappe.get_doc({
+			"doctype": "Time Tracking", "matter": matter.name, "date": nowdate(),
+			"time": 2, "billing": "Billable", "notes": "Review",
+			"employee": frappe.db.get_value("Matter", matter.name, "responsible_solicitor"),
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Time Tracking", entry_two.name, force=True)
+
+		from case_management.case_management.doctype.time_tracking.time_tracking import approve_time_entry
+		approve_time_entry(entry_two.name)
+		entry_two.reload()
+
+		fee_note = frappe.get_doc({
+			"doctype": "Fee Note", "matter": matter.name, "cutoff_date": nowdate(),
+			"lines": [
+				{"time_entry": entry_one.name, "hours": entry_one.time, "rate": entry_one.approved_rate, "amount": entry_one.approved_amount},
+				{"time_entry": entry_two.name, "hours": entry_two.time, "rate": entry_two.approved_rate, "amount": entry_two.approved_amount},
+			],
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Fee Note", fee_note.name, force=True)
+		self._approve(fee_note)
+
+		self.assertEqual(frappe.db.get_value("Time Tracking", entry_one.name, "wip_status"), "Reserved")
+		self.assertEqual(frappe.db.get_value("Time Tracking", entry_two.name, "wip_status"), "Reserved")
+
+		# Remove entry_two's line entirely and tamper with the remaining line's amount, still
+		# at status "Approved" -- this is a material edit, not an explicit status transition.
+		fee_note.lines = [row for row in fee_note.lines if row.time_entry != entry_two.name]
+		fee_note.lines[0].amount = flt(fee_note.lines[0].amount) + 1
+		fee_note.save()
+
+		self.assertEqual(fee_note.status, "Finance Review")
+		self.assertEqual(frappe.db.get_value("Time Tracking", entry_one.name, "wip_status"), "Approved")
+		self.assertFalse(frappe.db.get_value("Time Tracking", entry_one.name, "fee_note"))
+		self.assertEqual(frappe.db.get_value("Time Tracking", entry_two.name, "wip_status"), "Approved")
+		self.assertFalse(frappe.db.get_value("Time Tracking", entry_two.name, "fee_note"))

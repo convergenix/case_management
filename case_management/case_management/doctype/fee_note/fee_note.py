@@ -69,12 +69,11 @@ class FeeNote(Document):
 				)
 
 	def _release_lines(self):
-		for row in self.lines:
-			frappe.db.sql(
-				"""update `tabTime Tracking` set wip_status='Approved', fee_note=NULL
-				   where name=%(name)s and wip_status='Reserved' and fee_note=%(fee_note)s""",
-				{"name": row.time_entry, "fee_note": self.name},
-			)
+		frappe.db.sql(
+			"""update `tabTime Tracking` set wip_status='Approved', fee_note=NULL
+			   where fee_note=%(fee_note)s and wip_status='Reserved'""",
+			{"fee_note": self.name},
+		)
 
 	def compute_content_hash(self):
 		parts = sorted(
