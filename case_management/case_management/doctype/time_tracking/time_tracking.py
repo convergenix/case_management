@@ -14,14 +14,46 @@ class TimeTracking(Document):
     def validate(self):
         if self.is_new():
             previous_wip_status = "Draft"
-            self.wip_status = self.wip_status or "Draft"
+            # Nothing can be created pre-approved -- force a clean Draft slate
+            # regardless of what the caller supplied.
+            self.wip_status = "Draft"
+            self.approved_rate = None
+            self.approved_currency = None
+            self.approved_amount = None
+            self.approved_by = None
+            self.approved_on = None
         else:
-            previous_wip_status = frappe.db.get_value("Time Tracking", self.name, "wip_status")
+            previous = frappe.db.get_value(
+                "Time Tracking", self.name,
+                ["wip_status", "approved_rate", "approved_currency", "approved_amount", "time"],
+                as_dict=True,
+            )
+            previous_wip_status = previous.wip_status
+
+            if previous_wip_status != "Draft":
+                # Once approval has happened the WIP snapshot is immutable; only
+                # approve_time_entry (Draft->Approved) or the backend release/billing
+                # paths (raw SQL, bypassing validate()) may ever touch these fields.
+                for fieldname in ("approved_rate", "approved_currency", "approved_amount", "time"):
+                    old_value, new_value = previous.get(fieldname), self.get(fieldname)
+                    changed = (
+                        flt(old_value) != flt(new_value)
+                        if fieldname != "approved_currency"
+                        else old_value != new_value
+                    )
+                    if changed:
+                        frappe.throw(
+                            f"Cannot modify {fieldname} after Time Tracking approval; the WIP snapshot is locked."
+                        )
 
         wip_transitions = {
             "Draft": {"Approved"},
             "Approved": {"Reserved", "Written Off"},
-            "Reserved": {"Approved", "Billed"},
+            # Reserved -> Approved is deliberately NOT a legal validate()-gated
+            # transition: release back to Approved happens only via _release_lines'
+            # raw SQL in fee_note.py (which bypasses validate() entirely), specifically
+            # so a stale in-memory .save() can never double-spend a live reservation.
+            "Reserved": {"Billed"},
             "Billed": set(),
             "Written Off": set(),
         }
@@ -161,6 +193,12 @@ def continue_time_tracking(time_tracking):
 @frappe.whitelist()
 def approve_time_entry(time_tracking):
     doc = frappe.get_doc("Time Tracking", time_tracking)
+    if doc.docstatus == 1:
+        frappe.throw(
+            "Cannot approve a submitted Time Tracking entry for WIP billing; approval must "
+            "happen before submission. This is a deliberate draft-only design decision for "
+            "this thin slice, not a workaround."
+        )
     if doc.billing != "Billable":
         frappe.throw("Only Billable time entries can be approved for WIP.")
     if doc.wip_status != "Draft":

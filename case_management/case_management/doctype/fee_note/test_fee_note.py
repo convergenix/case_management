@@ -124,12 +124,107 @@ class TestFeeNote(FrappeTestCase):
 		fee_note.save()
 		approved_hash = fee_note.approved_hash
 
-		fee_note.lines[0].hours = 10
-		fee_note.lines[0].amount = 10 * float(entry.approved_rate)
+		# Adding a second, independently-approved line is a material edit that changes
+		# the hash without claiming more than either line's own approved snapshot.
+		second_entry = frappe.get_doc({
+			"doctype": "Time Tracking", "matter": matter.name, "date": nowdate(),
+			"time": 1, "billing": "Billable", "notes": "Extra work",
+			"employee": frappe.db.get_value("Matter", matter.name, "responsible_solicitor"),
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Time Tracking", second_entry.name, force=True)
+		from case_management.case_management.doctype.time_tracking.time_tracking import approve_time_entry
+		approve_time_entry(second_entry.name)
+		second_entry.reload()
+
+		fee_note.append("lines", {
+			"time_entry": second_entry.name,
+			"hours": second_entry.time,
+			"rate": second_entry.approved_rate,
+			"amount": second_entry.approved_amount,
+		})
 		fee_note.save()
 
 		self.assertNotEqual(fee_note.status, "Approved")
 		self.assertEqual(fee_note.status, "Finance Review")
+		self.assertNotEqual(fee_note.approved_hash, approved_hash)
+
+	def test_line_claiming_more_than_approved_snapshot_is_rejected(self):
+		matter, entry = self._make_matter_with_approved_time()
+		fee_note = frappe.get_doc({
+			"doctype": "Fee Note",
+			"matter": matter.name,
+			"cutoff_date": nowdate(),
+			"lines": [{
+				"time_entry": entry.name,
+				"hours": entry.time,
+				"rate": entry.approved_rate,
+				"amount": float(entry.approved_amount) + 1000,
+			}],
+		})
+		with self.assertRaises(frappe.ValidationError):
+			fee_note.insert()
+
+	def test_line_pointing_at_a_different_matters_time_entry_is_rejected(self):
+		matter_one, entry_one = self._make_matter_with_approved_time(label="Matter One")
+		matter_two, entry_two = self._make_matter_with_approved_time(label="Matter Two")
+
+		fee_note = frappe.get_doc({
+			"doctype": "Fee Note",
+			"matter": matter_one.name,
+			"cutoff_date": nowdate(),
+			"lines": [{
+				"time_entry": entry_two.name,
+				"hours": entry_two.time,
+				"rate": entry_two.approved_rate,
+				"amount": entry_two.approved_amount,
+			}],
+		})
+		with self.assertRaises(frappe.ValidationError):
+			fee_note.insert()
+
+	def test_moving_to_converted_without_native_invoice_is_rejected(self):
+		matter, entry = self._make_matter_with_approved_time()
+		fee_note = self._make_fee_note(matter, entry)
+		fee_note.status = "Partner Review"
+		fee_note.save()
+		fee_note.status = "Finance Review"
+		fee_note.save()
+		fee_note.status = "Approved"
+		fee_note.save()
+
+		fee_note.status = "Converted"
+		with self.assertRaises(frappe.ValidationError):
+			fee_note.save()
+
+	def test_lines_approved_under_different_currencies_are_rejected(self):
+		matter, entry_a = self._make_matter_with_approved_time(label="Currency Mismatch")
+		client = frappe.db.get_value("Matter", matter.name, "client")
+		frappe.db.set_value("Billing Details", {"customer": client}, "billing_currency", "USD")
+
+		employee = frappe.db.get_value("Matter", matter.name, "responsible_solicitor")
+		entry_b = frappe.get_doc({
+			"doctype": "Time Tracking", "matter": matter.name, "date": nowdate(),
+			"time": 1, "billing": "Billable", "notes": "Second currency entry", "employee": employee,
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Time Tracking", entry_b.name, force=True)
+
+		from case_management.case_management.doctype.time_tracking.time_tracking import approve_time_entry
+		approve_time_entry(entry_b.name)
+		entry_b.reload()
+
+		self.assertNotEqual(entry_a.approved_currency, entry_b.approved_currency)
+
+		fee_note = frappe.get_doc({
+			"doctype": "Fee Note",
+			"matter": matter.name,
+			"cutoff_date": nowdate(),
+			"lines": [
+				{"time_entry": entry_a.name, "hours": entry_a.time, "rate": entry_a.approved_rate, "amount": entry_a.approved_amount},
+				{"time_entry": entry_b.name, "hours": entry_b.time, "rate": entry_b.approved_rate, "amount": entry_b.approved_amount},
+			],
+		})
+		with self.assertRaises(frappe.ValidationError):
+			fee_note.insert()
 
 	def test_converting_an_approved_fee_note_with_stale_hash_is_rejected(self):
 		matter, entry = self._make_matter_with_approved_time()
@@ -147,7 +242,7 @@ class TestFeeNote(FrappeTestCase):
 			fee_note.save()
 
 	def test_hash_is_stable_across_int_and_float_numeric_types(self):
-		matter, entry = self._make_matter_with_approved_time()
+		matter, entry = self._make_matter_with_approved_time(hours=2, rate=80000)
 		fee_note = frappe.get_doc({
 			"doctype": "Fee Note",
 			"matter": matter.name,

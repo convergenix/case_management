@@ -26,11 +26,20 @@ class FeeNote(Document):
 			previous = frappe.db.get_value("Fee Note", self.name, ["status", "approved_hash"], as_dict=True)
 			previous_status = previous.status
 
+		self._validate_lines_against_wip_snapshot()
+
 		self.total_amount = sum(flt(row.amount) for row in self.lines)
 
 		if previous_status != self.status:
 			if self.status not in TRANSITIONS.get(previous_status, set()):
 				frappe.throw(f"Cannot move Fee Note from {previous_status} to {self.status}.")
+			if self.status == "Converted" and not self.native_invoice:
+				# The ORM path must never reach Converted on its own -- only
+				# convert_fee_note's raw-SQL claim (which runs before native_invoice
+				# is set, and never calls validate()) may do that.
+				frappe.throw(
+					"Fee Note can only move to Converted via conversion, which sets the invoice first."
+				)
 			if previous_status == "Approved" and self.compute_content_hash() != previous.approved_hash:
 				frappe.throw(
 					"This Fee Note has changed since it was approved; re-approve before converting or superseding."
@@ -53,6 +62,37 @@ class FeeNote(Document):
 				self.approved_by = None
 				self.approved_on = None
 				self._release_lines()
+
+	def _validate_lines_against_wip_snapshot(self):
+		approved_currencies = set()
+		for row in self.lines:
+			snapshot = _get_time_entry_snapshot(row.time_entry)
+			if snapshot.matter != self.matter:
+				frappe.throw(
+					f"Time entry {row.time_entry} belongs to matter {snapshot.matter}, "
+					f"not this Fee Note's matter {self.matter}."
+				)
+			# Only cross-check against the approval snapshot once the source entry has
+			# actually been approved -- there's nothing to compare against before then.
+			if snapshot.approved_amount is None:
+				continue
+			mismatches = []
+			if abs(flt(row.hours) - flt(snapshot.time)) > 0.01:
+				mismatches.append("hours")
+			if abs(flt(row.rate) - flt(snapshot.approved_rate)) > 0.01:
+				mismatches.append("rate")
+			if abs(flt(row.amount) - flt(snapshot.approved_amount)) > 0.01:
+				mismatches.append("amount")
+			if mismatches:
+				frappe.throw(
+					f"Fee Note line for {row.time_entry} does not match its approved WIP "
+					f"snapshot ({', '.join(mismatches)})."
+				)
+			if snapshot.approved_currency:
+				approved_currencies.add(snapshot.approved_currency)
+
+		if len(approved_currencies) > 1:
+			frappe.throw("All lines on a Fee Note must share one approved currency.")
 
 	def _reserve_lines(self):
 		for row in self.lines:
@@ -96,6 +136,17 @@ def has_permission(doc, user=None, permission_type=None):
 	return matter_has_permission(matter_doc, user=user, permission_type=permission_type)
 
 
+def _get_time_entry_snapshot(time_entry):
+	snapshot = frappe.db.get_value(
+		"Time Tracking", time_entry,
+		["matter", "wip_status", "approved_rate", "approved_currency", "approved_amount", "time"],
+		as_dict=True,
+	)
+	if not snapshot:
+		frappe.throw(f"Time entry {time_entry} does not exist.")
+	return snapshot
+
+
 def _get_or_create_legal_fees_item():
 	if not frappe.db.exists("Item", "Legal Fees"):
 		frappe.get_doc({
@@ -127,12 +178,31 @@ def convert_fee_note(fee_note, idempotency_key=None):
 			"Re-approve before converting."
 		)
 
+	# Atomically claim the Fee Note before doing anything else observable. Two
+	# concurrent conversions can both pass the checks above; only one of them may
+	# win this UPDATE, which is how we guarantee at most one Sales Invoice is ever
+	# posted for a given Fee Note.
+	frappe.db.sql(
+		"""update `tabFee Note` set status='Converted'
+		   where name=%(name)s and status='Approved'""",
+		{"name": doc.name},
+	)
+	claimed = frappe.db.sql("select ROW_COUNT()")[0][0]
+	if not claimed:
+		frappe.throw(f"Fee Note {doc.name} is no longer Approved (already converted or changed).")
+
 	matter = frappe.get_doc("Matter", doc.matter)
 	item_code = _get_or_create_legal_fees_item()
 	company_currency = frappe.get_cached_value("Company", matter.company, "default_currency")
-	billing_currency = frappe.db.get_value(
-		"Billing Details", {"customer": matter.client}, "billing_currency"
-	) or company_currency
+
+	approved_currencies = {
+		_get_time_entry_snapshot(row.time_entry).approved_currency for row in doc.lines
+	}
+	approved_currencies.discard(None)
+	approved_currencies.discard("")
+	if len(approved_currencies) > 1:
+		frappe.throw("All lines on a Fee Note must share one approved currency.")
+	billing_currency = approved_currencies.pop() if approved_currencies else company_currency
 
 	if billing_currency == company_currency:
 		conversion_rate = 1
@@ -154,15 +224,27 @@ def convert_fee_note(fee_note, idempotency_key=None):
 			"rate": doc.total_amount,
 		}],
 	})
+	# ignore_mandatory works around nedu_app's unrelated custom_branch mandatory custom
+	# field in this shared bench; independently vetted to not suppress any field this
+	# app's own logic needs -- _set_defaults()/controller auto-fill still populate
+	# everything real.
 	invoice.insert(ignore_permissions=True, ignore_mandatory=True)
 	invoice.submit()
 
 	doc.db_set("native_invoice", invoice.name, update_modified=False)
-	doc.db_set("status", "Converted", update_modified=False)
 	if idempotency_key:
 		doc.db_set("conversion_idempotency_key", idempotency_key, update_modified=False)
 
 	for row in doc.lines:
-		frappe.db.set_value("Time Tracking", row.time_entry, "wip_status", "Billed", update_modified=False)
+		frappe.db.sql(
+			"""update `tabTime Tracking` set wip_status='Billed'
+			   where name=%(name)s and wip_status='Reserved'""",
+			{"name": row.time_entry},
+		)
+		billed_claimed = frappe.db.sql("select ROW_COUNT()")[0][0]
+		if not billed_claimed:
+			frappe.throw(
+				f"Time entry {row.time_entry} was not in the expected Reserved state during billing."
+			)
 
 	return invoice.name

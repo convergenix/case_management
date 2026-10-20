@@ -92,15 +92,45 @@ class TestTimeTrackingWip(FrappeTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			approve_time_entry(entry.name)
 
-	def test_direct_creation_with_approved_wip_status_is_rejected(self):
+	def test_direct_creation_with_approved_wip_status_is_forced_back_to_draft(self):
 		matter, employee = self._make_matter()
 		entry = frappe.get_doc({
 			"doctype": "Time Tracking", "matter": matter.name, "date": nowdate(),
 			"time": 1, "billing": "Billable", "notes": "x", "employee": employee,
-			"wip_status": "Billed",
-		})
+			"wip_status": "Approved", "approved_rate": 999, "approved_amount": 999,
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Time Tracking", entry.name, force=True)
+
+		self.assertEqual(entry.wip_status, "Draft")
+		self.assertFalse(entry.approved_rate)
+		self.assertFalse(entry.approved_amount)
+
+	def test_approving_a_submitted_entry_is_rejected(self):
+		matter, employee = self._make_matter()
+		entry = self._make_time_entry(matter, employee)
+		entry.submit()
+		self.addCleanup(self._cancel_time_entry, entry.name)
+
+		from case_management.case_management.doctype.time_tracking.time_tracking import approve_time_entry
 		with self.assertRaises(frappe.ValidationError):
-			entry.insert()
+			approve_time_entry(entry.name)
+
+	def _cancel_time_entry(self, name):
+		doc = frappe.get_doc("Time Tracking", name)
+		if doc.docstatus == 1:
+			doc.cancel()
+
+	def test_editing_approved_amount_after_approval_is_rejected(self):
+		matter, employee = self._make_matter()
+		entry = self._make_time_entry(matter, employee, hours=2)
+
+		from case_management.case_management.doctype.time_tracking.time_tracking import approve_time_entry
+		approve_time_entry(entry.name)
+		entry.reload()
+
+		entry.approved_amount = float(entry.approved_amount) + 1
+		with self.assertRaises(frappe.ValidationError):
+			entry.save()
 
 	def test_rate_change_after_approval_does_not_rewrite_approved_amount(self):
 		matter, employee = self._make_matter()

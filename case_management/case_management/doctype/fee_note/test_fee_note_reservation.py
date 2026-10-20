@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import flt, nowdate
+from frappe.utils import nowdate
 
 
 class TestFeeNoteReservation(FrappeTestCase):
@@ -95,6 +95,24 @@ class TestFeeNoteReservation(FrappeTestCase):
 		self.assertEqual(frappe.db.get_value("Time Tracking", entry.name, "wip_status"), "Reserved")
 		self.assertEqual(frappe.db.get_value("Time Tracking", entry.name, "fee_note"), fee_note.name)
 
+	def test_stale_save_cannot_move_a_reserved_entry_back_to_approved(self):
+		matter, entry = self._make_matter_with_approved_time()
+		# Loaded before the Fee Note approval below reserves it via raw SQL (which
+		# does not bump `modified`), so this in-memory copy looks "current" to
+		# check_if_latest even once the entry has actually moved on.
+		stale_entry = frappe.get_doc("Time Tracking", entry.name)
+
+		fee_note = self._make_fee_note(matter, entry)
+		self._approve(fee_note)
+		self.assertEqual(frappe.db.get_value("Time Tracking", entry.name, "wip_status"), "Reserved")
+
+		stale_entry.wip_status = "Approved"
+		with self.assertRaises(frappe.ValidationError):
+			stale_entry.save()
+
+		self.assertEqual(frappe.db.get_value("Time Tracking", entry.name, "wip_status"), "Reserved")
+		self.assertEqual(frappe.db.get_value("Time Tracking", entry.name, "fee_note"), fee_note.name)
+
 	def test_two_fee_notes_cannot_both_reserve_the_same_time_entry(self):
 		matter, entry = self._make_matter_with_approved_time()
 		fee_note_a = self._make_fee_note(matter, entry)
@@ -152,10 +170,9 @@ class TestFeeNoteReservation(FrappeTestCase):
 		self.assertEqual(frappe.db.get_value("Time Tracking", entry_one.name, "wip_status"), "Reserved")
 		self.assertEqual(frappe.db.get_value("Time Tracking", entry_two.name, "wip_status"), "Reserved")
 
-		# Remove entry_two's line entirely and tamper with the remaining line's amount, still
-		# at status "Approved" -- this is a material edit, not an explicit status transition.
+		# Remove entry_two's line entirely, still at status "Approved" -- this is a
+		# material edit (it changes the content hash), not an explicit status transition.
 		fee_note.lines = [row for row in fee_note.lines if row.time_entry != entry_two.name]
-		fee_note.lines[0].amount = flt(fee_note.lines[0].amount) + 1
 		fee_note.save()
 
 		self.assertEqual(fee_note.status, "Finance Review")

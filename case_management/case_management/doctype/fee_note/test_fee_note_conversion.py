@@ -194,6 +194,26 @@ class TestFeeNoteConversion(FrappeTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			convert_fee_note(fee_note.name, idempotency_key="tampered")
 
+	def test_conversion_fails_its_claim_if_fee_note_was_already_claimed_elsewhere(self):
+		# FrappeTestCase can't truly exercise two concurrent convert_fee_note calls, but
+		# we can simulate the window a second caller would land in: another process's
+		# claim already won (status flipped to Converted) before the invoice/native_invoice
+		# bookkeeping finished. This attempt must fail cleanly and never create an invoice.
+		fee_note, entry = self._make_matter_with_approved_fee_note()
+		frappe.db.set_value("Fee Note", fee_note.name, "status", "Converted")
+
+		from case_management.case_management.doctype.fee_note.fee_note import convert_fee_note
+		with self.assertRaises(frappe.ValidationError):
+			convert_fee_note(fee_note.name, idempotency_key="lost-the-race")
+
+		self.assertFalse(frappe.db.get_value("Fee Note", fee_note.name, "native_invoice"))
+		self.assertEqual(
+			len(frappe.get_all(
+				"Sales Invoice", filters={"customer": frappe.db.get_value("Matter", fee_note.matter, "client")}
+			)),
+			0,
+		)
+
 	def test_converted_invoice_is_denominated_in_the_clients_billing_currency(self):
 		company_currency = frappe.db.get_value("Company", frappe.db.get_value("Company", {}, "name"), "default_currency")
 		self.assertNotEqual(
