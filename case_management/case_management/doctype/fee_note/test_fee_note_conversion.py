@@ -13,7 +13,59 @@ def _cancel_and_delete_invoice(invoice_name):
 
 
 class TestFeeNoteConversion(FrappeTestCase):
-	def _make_matter_with_approved_fee_note(self, label="Conversion Test", hours=3.5, rate=80000):
+	def setUp(self):
+		# convert_fee_note bills in the client's own Billing Details currency, which
+		# may differ from the company's base currency (this bench: NGN vs INR). ERPNext
+		# requires either a currency-matching receivable account or this setting to post
+		# a foreign-currency invoice against the company's single base-currency Debtors
+		# account; restore the original value so this test module doesn't leak a global
+		# Accounts Settings change into other test modules.
+		settings = frappe.get_single("Accounts Settings")
+		original = settings.allow_multi_currency_invoices_against_single_party_account
+		if not original:
+			frappe.db.set_single_value(
+				"Accounts Settings", "allow_multi_currency_invoices_against_single_party_account", 1
+			)
+			self.addCleanup(
+				frappe.db.set_single_value,
+				"Accounts Settings",
+				"allow_multi_currency_invoices_against_single_party_account",
+				original,
+			)
+		self._ensure_currency_exchange(
+			"NGN", frappe.db.get_value("Company", frappe.db.get_value("Company", {}, "name"), "default_currency"), 0.0048
+		)
+
+	def _ensure_currency_exchange(self, from_currency, to_currency, rate):
+		"""Seed a deterministic Currency Exchange record so get_exchange_rate()
+		resolves from the DB instead of falling through to a live API call
+		(which has no network access in this test environment and would
+		otherwise silently return 0.0)."""
+		existing = frappe.db.exists(
+			"Currency Exchange",
+			{"from_currency": from_currency, "to_currency": to_currency, "date": nowdate()},
+		)
+		if existing:
+			return
+		doc = frappe.get_doc({
+			"doctype": "Currency Exchange",
+			"date": nowdate(),
+			"from_currency": from_currency,
+			"to_currency": to_currency,
+			"exchange_rate": rate,
+		}).insert(ignore_permissions=True)
+		self.addCleanup(frappe.delete_doc, "Currency Exchange", doc.name, force=True)
+
+	def _make_outsider(self, email):
+		if not frappe.db.exists("User", email):
+			frappe.get_doc({
+				"doctype": "User", "email": email, "first_name": "Outsider",
+				"send_welcome_email": 0, "roles": [{"role": "Lawyer Manager"}],
+			}).insert(ignore_permissions=True)
+			self.addCleanup(frappe.delete_doc, "User", email, force=True)
+		return email
+
+	def _make_matter_with_approved_fee_note(self, label="Conversion Test", hours=3.5, rate=80000, billing_currency="NGN", is_restricted=0):
 		customer = frappe.get_doc({
 			"doctype": "Customer", "customer_name": f"{label} Customer", "customer_type": "Company",
 		}).insert(ignore_mandatory=True)
@@ -21,7 +73,7 @@ class TestFeeNoteConversion(FrappeTestCase):
 
 		billing = frappe.get_doc({
 			"doctype": "Billing Details", "customer": customer.name,
-			"billing_rate": rate, "billing_currency": "NGN",
+			"billing_rate": rate, "billing_currency": billing_currency,
 		}).insert(ignore_permissions=True)
 		self.addCleanup(frappe.delete_doc, "Billing Details", billing.name, force=True)
 
@@ -62,6 +114,7 @@ class TestFeeNoteConversion(FrappeTestCase):
 			"doctype": "Matter", "client": customer.name, "intake": intake.name, "status": "Open",
 			"open_date": nowdate(), "practice_area": practice_area.name,
 			"transaction": f"{label} Transaction", "responsible_solicitor": employee, "company": company,
+			"is_restricted": is_restricted,
 		}).insert()
 		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
 
@@ -140,3 +193,45 @@ class TestFeeNoteConversion(FrappeTestCase):
 		from case_management.case_management.doctype.fee_note.fee_note import convert_fee_note
 		with self.assertRaises(frappe.ValidationError):
 			convert_fee_note(fee_note.name, idempotency_key="tampered")
+
+	def test_converted_invoice_is_denominated_in_the_clients_billing_currency(self):
+		company_currency = frappe.db.get_value("Company", frappe.db.get_value("Company", {}, "name"), "default_currency")
+		self.assertNotEqual(
+			company_currency, "NGN",
+			"this test needs a company whose base currency differs from the billing currency "
+			"under test; adjust the billing_currency below if this bench's default company is NGN",
+		)
+		self._ensure_currency_exchange("NGN", company_currency, 0.0048)
+
+		fee_note, entry = self._make_matter_with_approved_fee_note(
+			label="Multi Currency", billing_currency="NGN"
+		)
+
+		from case_management.case_management.doctype.fee_note.fee_note import convert_fee_note
+		invoice_name = convert_fee_note(fee_note.name, idempotency_key="currency-key")
+		self.addCleanup(_cancel_and_delete_invoice, invoice_name)
+
+		invoice = frappe.get_doc("Sales Invoice", invoice_name)
+		self.assertEqual(invoice.currency, "NGN")
+		self.assertNotEqual(invoice.currency, company_currency)
+		self.assertEqual(float(invoice.grand_total), float(fee_note.total_amount))
+
+	def test_a_user_without_matter_access_cannot_convert_its_fee_note(self):
+		outsider = self._make_outsider("test_fee_note_conversion_outsider@example.com")
+		self.assertIsNone(frappe.db.get_value("Employee", {"user_id": outsider}, "name"))
+
+		fee_note, entry = self._make_matter_with_approved_fee_note(
+			label="Restricted Conversion", is_restricted=1
+		)
+
+		from case_management.case_management.doctype.fee_note.fee_note import convert_fee_note
+		frappe.set_user(outsider)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				convert_fee_note(fee_note.name, idempotency_key="outsider-attempt")
+		finally:
+			frappe.set_user("Administrator")
+
+		fee_note.reload()
+		self.assertFalse(fee_note.native_invoice)
+		self.assertEqual(fee_note.status, "Approved")

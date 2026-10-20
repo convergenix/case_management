@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 import hashlib
 import frappe
 from frappe.model.document import Document
-from frappe.utils import flt, now_datetime
+from frappe.utils import flt, now_datetime, nowdate
 
 
 TRANSITIONS = {
@@ -113,6 +113,7 @@ def _get_or_create_legal_fees_item():
 @frappe.whitelist()
 def convert_fee_note(fee_note, idempotency_key=None):
 	doc = frappe.get_doc("Fee Note", fee_note)
+	frappe.has_permission("Fee Note", doc=doc, ptype="write", throw=True)
 
 	if doc.native_invoice:
 		return doc.native_invoice
@@ -129,12 +130,22 @@ def convert_fee_note(fee_note, idempotency_key=None):
 	matter = frappe.get_doc("Matter", doc.matter)
 	item_code = _get_or_create_legal_fees_item()
 	company_currency = frappe.get_cached_value("Company", matter.company, "default_currency")
+	billing_currency = frappe.db.get_value(
+		"Billing Details", {"customer": matter.client}, "billing_currency"
+	) or company_currency
+
+	if billing_currency == company_currency:
+		conversion_rate = 1
+	else:
+		from erpnext.setup.utils import get_exchange_rate
+		conversion_rate = flt(get_exchange_rate(billing_currency, company_currency, nowdate()))
 
 	invoice = frappe.get_doc({
 		"doctype": "Sales Invoice",
 		"customer": matter.client,
 		"company": matter.company,
-		"currency": company_currency,
+		"currency": billing_currency,
+		"conversion_rate": conversion_rate,
 		"matter_id": matter.name,
 		"items": [{
 			"item_code": item_code,
