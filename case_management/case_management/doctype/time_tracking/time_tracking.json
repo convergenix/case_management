@@ -25,6 +25,15 @@
   "revenue_tab",
   "revenue",
   "revenue_in_naira",
+  "sb_wip",
+  "wip_status",
+  "approved_rate",
+  "approved_currency",
+  "column_break_wip",
+  "approved_amount",
+  "approved_by",
+  "approved_on",
+  "fee_note",
   "amended_from"
  ],
  "fields": [
@@ -146,6 +155,68 @@
   {
    "fieldname": "section_break_kiti",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "sb_wip",
+   "fieldtype": "Section Break",
+   "label": "WIP Approval"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "wip_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "WIP Status",
+   "options": "Draft\nApproved\nReserved\nBilled\nWritten Off",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_rate",
+   "fieldtype": "Currency",
+   "label": "Approved Rate",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_currency",
+   "fieldtype": "Data",
+   "label": "Approved Currency",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_wip",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "approved_amount",
+   "fieldtype": "Currency",
+   "label": "Approved Amount",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_on",
+   "fieldtype": "Datetime",
+   "label": "Approved On",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "fee_note",
+   "fieldtype": "Link",
+   "label": "Fee Note",
+   "no_copy": 1,
+   "options": "Fee Note",
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",

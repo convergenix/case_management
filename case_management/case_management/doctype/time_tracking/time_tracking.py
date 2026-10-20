@@ -11,6 +11,26 @@ from erpnext.setup.utils import get_exchange_rate
 
 class TimeTracking(Document):
 
+    def validate(self):
+        if self.is_new():
+            previous_wip_status = "Draft"
+            self.wip_status = self.wip_status or "Draft"
+        else:
+            previous_wip_status = frappe.db.get_value("Time Tracking", self.name, "wip_status")
+
+        wip_transitions = {
+            "Draft": {"Approved"},
+            "Approved": {"Reserved", "Written Off"},
+            "Reserved": {"Approved", "Billed"},
+            "Billed": set(),
+            "Written Off": set(),
+        }
+        if previous_wip_status != self.wip_status:
+            if self.wip_status not in wip_transitions.get(previous_wip_status, set()):
+                frappe.throw(
+                    f"Cannot move Time Tracking WIP status from {previous_wip_status} to {self.wip_status}."
+                )
+
     def on_submit(self):
         if self.start_time:
             self.status = "Time Tracking Started"
@@ -136,6 +156,31 @@ def pause_time_tracking(time_tracking):
 def continue_time_tracking(time_tracking):
     frappe.logger().info(f"Timer resumed for {time_tracking} by {frappe.session.user}")
     return "Continued"
+
+
+@frappe.whitelist()
+def approve_time_entry(time_tracking):
+    doc = frappe.get_doc("Time Tracking", time_tracking)
+    if doc.billing != "Billable":
+        frappe.throw("Only Billable time entries can be approved for WIP.")
+    if doc.wip_status != "Draft":
+        frappe.throw(f"Only a Draft entry can be approved (current WIP status: {doc.wip_status}).")
+
+    customer = doc.matter_name
+    rate_info = frappe.db.get_value(
+        "Billing Details", {"customer": customer}, ["billing_rate", "billing_currency"], as_dict=True
+    )
+    if not rate_info or not rate_info.billing_rate:
+        frappe.throw(f"No Billing Details rate configured for {customer}.")
+
+    doc.wip_status = "Approved"
+    doc.approved_rate = rate_info.billing_rate
+    doc.approved_currency = rate_info.billing_currency
+    doc.approved_amount = flt(doc.time) * flt(rate_info.billing_rate)
+    doc.approved_by = frappe.session.user
+    doc.approved_on = now_datetime()
+    doc.save(ignore_permissions=True)
+    return doc.name
 
 
 # ─── Internal helper ──────────────────────────────────────────────────────────
