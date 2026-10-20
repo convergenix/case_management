@@ -161,8 +161,9 @@ class TestM3Acceptance(FrappeTestCase):
 
 		_approve(fee_note_a)
 
-		with self.assertRaises(frappe.ValidationError):
+		with self.assertRaises(frappe.ValidationError) as cm:
 			_approve(fee_note_b)
+		self.assertIn("no longer available for billing", str(cm.exception))
 
 		fee_note_b.reload()
 		self.assertNotEqual(fee_note_b.status, "Approved")
