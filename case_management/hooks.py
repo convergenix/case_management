@@ -151,5 +151,6 @@ scheduler_events = {
 # }
 
 after_migrate = [
-    "case_management.after_migrate.update_translation"
+    "case_management.after_migrate.update_translation",
+    "case_management.after_migrate.set_default_workspace",
 ]

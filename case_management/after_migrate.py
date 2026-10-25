@@ -1,5 +1,11 @@
 import frappe
 
+
+def set_default_workspace():
+    if frappe.db.exists("Workspace", "LawERP"):
+        frappe.defaults.set_default("desktop:home_page", "LawERP", "__default")
+
+
 def update_translation():
     print("Updating Translation")
     translations = frappe.get_all("Translation")
