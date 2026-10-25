@@ -4,6 +4,8 @@ import frappe
 def set_default_workspace():
     if frappe.db.exists("Workspace", "LawERP"):
         frappe.defaults.set_default("desktop:home_page", "LawERP", "__default")
+        if not frappe.db.get_single_value("System Settings", "default_app"):
+            frappe.db.set_single_value("System Settings", "default_app", "case_management")
 
 
 def update_translation():

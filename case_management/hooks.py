@@ -11,6 +11,16 @@ app_color = "grey"
 app_email = "masonarmani38@gmail.com"
 app_license = "MIT"
 
+add_to_apps_screen = [
+	{
+		"name": app_name,
+		"logo": "/assets/case_management/images/lawerp-logo.svg",
+		"title": "LawERP",
+		"route": "/desk/case-management/lawerp",
+		"sequence_id": 2,
+	}
+]
+
 # Includes in <head>
 # ------------------
 
