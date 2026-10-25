@@ -8,6 +8,6 @@ def update_translation():
         doc = frappe.get_doc("Translation", i.name)
         new_doc = frappe.get_doc(doc.as_dict())
         doc.delete()
-        new_doc.language = settings.language
+        new_doc.language = settings.language or "en"
         new_doc.context = ""
         new_doc.insert(ignore_permissions=1)
