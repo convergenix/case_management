@@ -10,6 +10,7 @@ PRIVILEGED_ROLES = {"Managing Partner", "System Manager"}
 class PurchaseRequisition(Document):
 	def validate(self):
 		self._compute_amounts()
+		self._validate_requester_identity()
 		self._validate_independence()
 		self._validate_approval_transition()
 
@@ -24,6 +25,23 @@ class PurchaseRequisition(Document):
 		for row in self.items:
 			row.estimated_amount = flt(row.qty) * flt(row.estimated_rate)
 		self.total_estimated_amount = sum(flt(row.estimated_amount) for row in self.items)
+
+	def _validate_requester_identity(self):
+		# employee != approver alone proves nothing if employee itself can be
+		# set to an arbitrary Employee -- an ordinary user may only name
+		# themselves as the requester; a privileged user may submit on
+		# someone else's behalf (e.g. an assistant entering a request for an
+		# executive).
+		if not self.employee:
+			return
+		if PRIVILEGED_ROLES & set(frappe.get_roles(frappe.session.user)):
+			return
+		requester_user = frappe.db.get_value("Employee", self.employee, "user_id")
+		if frappe.session.user != requester_user:
+			frappe.throw(
+				"You can only create or save a Purchase Requisition naming yourself as the "
+				"Employee, unless you hold the Managing Partner or System Manager role."
+			)
 
 	def _validate_independence(self):
 		if self.employee and self.approver and self.employee == self.approver:

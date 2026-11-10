@@ -206,17 +206,41 @@ class TestPurchaseRequisition(FrappeTestCase):
 
 		# Same reasoning as above: this must run as a genuinely non-privileged
 		# user, since Administrator (the default test session) always holds
-		# System Manager and would bypass the independence check.
+		# System Manager and would bypass the independence check. The acting
+		# user is bound to the requester Employee so this test isolates the
+		# independence check from the separate requester-identity check.
 		outsider_user = frappe.new_doc("User")
 		outsider_user.email = "pr-state-outsider-4@example.com"
 		outsider_user.first_name = "PR State Outsider 4"
+		outsider_user.insert(ignore_permissions=True)
+		self.addCleanup(frappe.delete_doc, "User", outsider_user.name, force=True)
+		frappe.db.set_value("Employee", requester.name, "user_id", outsider_user.name)
+
+		frappe.set_user(outsider_user.name)
+		try:
+			with self.assertRaises(frappe.ValidationError):
+				self._make_requisition(requester.name, requester.name)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_non_privileged_user_cannot_name_a_different_employee_as_requester(self):
+		requester = self._make_employee("PR Identity Requester 7")
+		approver = self._make_employee("PR Identity Approver 7")
+		self.addCleanup(frappe.delete_doc, "Employee", requester.name, force=True)
+		self.addCleanup(frappe.delete_doc, "Employee", approver.name, force=True)
+
+		# requester.user_id is left unset, so the acting user below is nobody's
+		# named Employee -- creating a requisition "as" requester must fail.
+		outsider_user = frappe.new_doc("User")
+		outsider_user.email = "pr-identity-outsider-7@example.com"
+		outsider_user.first_name = "PR Identity Outsider 7"
 		outsider_user.insert(ignore_permissions=True)
 		self.addCleanup(frappe.delete_doc, "User", outsider_user.name, force=True)
 
 		frappe.set_user(outsider_user.name)
 		try:
 			with self.assertRaises(frappe.ValidationError):
-				self._make_requisition(requester.name, requester.name)
+				self._make_requisition(requester.name, approver.name)
 		finally:
 			frappe.set_user("Administrator")
 
