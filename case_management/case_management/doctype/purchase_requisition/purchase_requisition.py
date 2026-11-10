@@ -56,11 +56,21 @@ class PurchaseRequisition(Document):
 			)
 
 	def _validate_approval_transition(self):
-		previous_approval_status = "Pending" if self.is_new() else frappe.db.get_value(
-			"Purchase Requisition", self.name, "approval_status"
-		)
+		if self.is_new():
+			previous_approval_status, previous_rejection_reason = "Pending", None
+		else:
+			previous_approval_status, previous_rejection_reason = frappe.db.get_value(
+				"Purchase Requisition", self.name, ["approval_status", "rejection_reason"]
+			)
 
 		if previous_approval_status == self.approval_status:
+			decided = previous_approval_status in ("Approved", "Rejected")
+			reason_changed = (self.rejection_reason or "") != (previous_rejection_reason or "")
+			if decided and reason_changed and not _is_privileged():
+				frappe.throw(
+					f"Purchase Requisition is already {previous_approval_status}; its Rejection Reason "
+					"can only be changed by a Managing Partner or System Manager."
+				)
 			return
 
 		if previous_approval_status in ("Approved", "Rejected"):

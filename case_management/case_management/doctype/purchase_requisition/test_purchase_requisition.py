@@ -327,6 +327,34 @@ class TestPurchaseRequisition(FrappeTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			pr.save()
 
+	def test_rejection_reason_is_locked_once_decided_except_for_privileged_roles(self):
+		requester = self._make_employee("PR Reason Requester 1")
+		approver = self._make_employee("PR Reason Approver 1")
+		self.addCleanup(frappe.delete_doc, "Employee", requester.name, force=True)
+		self.addCleanup(frappe.delete_doc, "Employee", approver.name, force=True)
+		bystander = self._make_user("PR Reason Bystander 1")
+		pr = self._make_requisition(requester.name, approver.name)
+		pr.submit()
+		pr.approval_status = "Approved"
+		pr.save()
+
+		pr.reload()
+		pr.rejection_reason = "Rewritten after the fact."
+		frappe.set_user(bystander)
+		try:
+			with self.assertRaises(frappe.ValidationError):
+				pr.save()
+		finally:
+			frappe.set_user("Administrator")
+
+		pr.reload()
+		pr.rejection_reason = "Corrected by a Managing Partner."
+		pr.save()
+		self.assertEqual(
+			frappe.db.get_value("Purchase Requisition", pr.name, "rejection_reason"),
+			"Corrected by a Managing Partner.",
+		)
+
 	def test_non_matter_requisition_has_no_ethical_wall_restriction(self):
 		requester = self._make_employee("PR Wall Requester 1")
 		approver = self._make_employee("PR Wall Approver 1")
