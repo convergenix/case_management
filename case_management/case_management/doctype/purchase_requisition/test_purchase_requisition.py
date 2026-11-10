@@ -7,10 +7,10 @@ from frappe.tests.utils import FrappeTestCase
 
 
 class TestPurchaseRequisition(FrappeTestCase):
-	def _make_employee(self, label, user_id=None):
+	def _make_employee(self, label, user_id=None, **fields):
 		return frappe.get_doc({
-			"doctype": "Employee", "employee_name": label, "status": "Active",
-			"user_id": user_id, "create_user_permission": 0,
+			"doctype": "Employee", "first_name": label, "status": "Active",
+			"user_id": user_id, "create_user_permission": 0, **fields,
 		}).insert(ignore_mandatory=True)
 
 	@contextmanager
@@ -97,7 +97,7 @@ class TestPurchaseRequisition(FrappeTestCase):
 		}).insert()
 		self.addCleanup(frappe.delete_doc, "Purchase Requisition", pr.name, force=True)
 
-		self.assertEqual(pr.employee_name, requester.employee_name)
+		self.assertEqual(pr.employee_name, "PR Fetch Requester")
 
 	def test_supplied_fetch_field_values_are_overridden_by_the_real_source(self):
 		requester = self._make_employee("PR Override Requester")
@@ -125,7 +125,7 @@ class TestPurchaseRequisition(FrappeTestCase):
 		self.assertEqual(pr.company, real_company)
 		self.assertEqual(pr.client, matter.client)
 
-	def _make_requisition(self, requester, approver, status="Pending"):
+	def _make_requisition(self, requester, approver):
 		pr = frappe.get_doc({
 			"doctype": "Purchase Requisition",
 			"employee": requester, "approver": approver,
@@ -264,15 +264,11 @@ class TestPurchaseRequisition(FrappeTestCase):
 
 	def _make_rehired_employee_pair(self, label):
 		user = self._make_user(f"{label} User")
-		former = frappe.get_doc({
-			"doctype": "Employee", "first_name": f"{label} Former", "status": "Left",
-			"relieving_date": frappe.utils.nowdate(), "user_id": user, "create_user_permission": 0,
-		}).insert(ignore_mandatory=True)
+		former = self._make_employee(
+			f"{label} Former", user_id=user, status="Left", relieving_date=frappe.utils.nowdate()
+		)
 		self.addCleanup(frappe.delete_doc, "Employee", former.name, force=True)
-		current = frappe.get_doc({
-			"doctype": "Employee", "first_name": f"{label} Current", "status": "Active",
-			"user_id": user, "create_user_permission": 0,
-		}).insert(ignore_mandatory=True)
+		current = self._make_employee(f"{label} Current", user_id=user)
 		self.addCleanup(frappe.delete_doc, "Employee", current.name, force=True)
 		return user, current, former
 
