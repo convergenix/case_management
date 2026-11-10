@@ -29,7 +29,6 @@
   },
   {
    "fetch_from": "employee.employee_name",
-   "fetch_if_empty": 1,
    "fieldname": "employee_name",
    "fieldtype": "Data",
    "label": "Employee Name",
@@ -37,7 +36,6 @@
   },
   {
    "fetch_from": "employee.department",
-   "fetch_if_empty": 1,
    "fieldname": "department",
    "fieldtype": "Link",
    "label": "Department",
@@ -46,7 +44,6 @@
   },
   {
    "fetch_from": "employee.company",
-   "fetch_if_empty": 1,
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
@@ -62,7 +59,6 @@
   {
    "depends_on": "matter",
    "fetch_from": "matter.client",
-   "fetch_if_empty": 1,
    "fieldname": "client",
    "fieldtype": "Link",
    "label": "Client",
