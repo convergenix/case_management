@@ -366,6 +366,28 @@ class TestPurchaseRequisition(FrappeTestCase):
 			"Corrected by a Managing Partner.",
 		)
 
+	def test_amending_a_rejected_requisition_starts_a_fresh_pending_draft(self):
+		requester = self._make_employee("PR Amend Requester 1")
+		approver = self._make_employee("PR Amend Approver 1")
+		self.addCleanup(frappe.delete_doc, "Employee", requester.name, force=True)
+		self.addCleanup(frappe.delete_doc, "Employee", approver.name, force=True)
+		pr = self._make_requisition(requester.name, approver.name)
+		pr.submit()
+		pr.approval_status = "Rejected"
+		pr.rejection_reason = "Quote too high."
+		pr.save()
+		pr.cancel()
+
+		# Desk Amend copies every field, no_copy ones included.
+		amended = frappe.copy_doc(pr)
+		amended.amended_from = pr.name
+		amended.docstatus = 0
+		amended.insert()
+		self.addCleanup(frappe.delete_doc, "Purchase Requisition", amended.name, force=True)
+
+		self.assertEqual(amended.approval_status, "Pending")
+		self.assertFalse(amended.rejection_reason)
+
 	def test_non_matter_requisition_has_no_ethical_wall_restriction(self):
 		requester = self._make_employee("PR Wall Requester 1")
 		approver = self._make_employee("PR Wall Approver 1")

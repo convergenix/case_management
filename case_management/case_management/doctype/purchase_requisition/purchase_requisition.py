@@ -8,6 +8,13 @@ PRIVILEGED_ROLES = {"Managing Partner", "System Manager"}
 
 
 class PurchaseRequisition(Document):
+	def before_insert(self):
+		# Desk Amend copies no_copy fields too, so an amendment would otherwise
+		# inherit the cancelled original's decision.
+		if self.amended_from:
+			self.approval_status = "Pending"
+			self.rejection_reason = None
+
 	def validate(self):
 		self._compute_amounts()
 		self._validate_requester_identity()
