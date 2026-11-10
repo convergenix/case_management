@@ -19,6 +19,7 @@ class PurchaseRequisition(Document):
 		self._compute_amounts()
 		self._validate_requester_identity()
 		self._validate_independence()
+		self._validate_approver_matter_access()
 		self._validate_approval_transition()
 
 	def before_update_after_submit(self):
@@ -69,6 +70,21 @@ class PurchaseRequisition(Document):
 			frappe.throw(
 				"The requester cannot also be the approver on the same requisition, "
 				"unless you hold the Managing Partner or System Manager role."
+			)
+
+	def _validate_approver_matter_access(self):
+		if not (self.matter and self.approver):
+			return
+		from case_management.case_management.doctype.matter.matter import has_permission as matter_has_permission
+		matter_doc = frappe.get_cached_doc("Matter", self.matter)
+		if not matter_doc.is_restricted:
+			return
+		approver_user = _user_of(self.approver)
+		# matter_has_permission falls back to the session user when user is None.
+		if not approver_user or not matter_has_permission(matter_doc, user=approver_user):
+			frappe.throw(
+				f"The Approver has no access to restricted Matter {self.matter}; choose an Approver "
+				"on that matter's team."
 			)
 
 	def _validate_approval_transition(self):

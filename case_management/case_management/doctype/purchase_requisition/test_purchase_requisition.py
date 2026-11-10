@@ -21,7 +21,7 @@ class TestPurchaseRequisition(FrappeTestCase):
 		finally:
 			frappe.set_user("Administrator")
 
-	def _make_matter(self, label):
+	def _make_matter(self, label, is_restricted=0, responsible_solicitor=None):
 		customer = frappe.get_doc({
 			"doctype": "Customer", "customer_name": f"{label} Customer", "customer_type": "Company",
 		}).insert(ignore_mandatory=True)
@@ -52,13 +52,12 @@ class TestPurchaseRequisition(FrappeTestCase):
 		practice_area = frappe.get_doc({"doctype": "Practice Area", "practice_area": f"{label} Practice Area"}).insert()
 		self.addCleanup(frappe.delete_doc, "Practice Area", practice_area.name, force=True)
 
-		employee = frappe.db.get_value("Employee", {}, "name")
-		company = frappe.db.get_value("Company", {}, "name")
-
 		matter = frappe.get_doc({
 			"doctype": "Matter", "client": customer.name, "intake": intake.name, "status": "Open",
 			"open_date": frappe.utils.nowdate(), "practice_area": practice_area.name,
-			"transaction": f"{label} Transaction", "responsible_solicitor": employee, "company": company,
+			"transaction": f"{label} Transaction",
+			"responsible_solicitor": responsible_solicitor or frappe.db.get_value("Employee", {}, "name"),
+			"company": frappe.db.get_value("Company", {}, "name"), "is_restricted": is_restricted,
 		}).insert()
 		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
 		return matter
@@ -257,7 +256,7 @@ class TestPurchaseRequisition(FrappeTestCase):
 
 	def _make_user(self, label):
 		user = frappe.new_doc("User")
-		user.email = f"{frappe.scrub(label).replace('_', '-')}@example.com"
+		user.email = f"{frappe.scrub(label).replace('_', '-')}-{frappe.generate_hash(length=6)}@example.com"
 		user.first_name = label
 		user.insert(ignore_permissions=True)
 		self.addCleanup(frappe.delete_doc, "User", user.name, force=True)
@@ -398,48 +397,11 @@ class TestPurchaseRequisition(FrappeTestCase):
 		self.assertTrue(frappe.has_permission("Purchase Requisition", doc=pr, ptype="read"))
 
 	def test_restricted_matter_requisition_is_hidden_from_an_outsider(self):
-		# Matter requires a real, Approved Intake (confirmed in test_matter_access.py's
-		# own _make_approved_intake) -- a bare Matter.insert() with no intake fails.
-		client = frappe.get_doc({
-			"doctype": "Legal Party", "party_name": "PR Wall Client", "party_type": "Organization",
-		}).insert()
-		self.addCleanup(frappe.delete_doc, "Legal Party", client.name, force=True)
-		intake = frappe.get_doc({
-			"doctype": "Intake", "proposed_client": client.name, "scope": "General advisory",
-			"parties": [{"legal_party": client.name, "role": "Proposed Client"}],
-		}).insert()
-		self.addCleanup(frappe.delete_doc, "Intake", intake.name, force=True)
-		review = frappe.get_doc({
-			"doctype": "Conflict Review", "intake": intake.name,
-			"party_set_hash": intake.get_party_set_hash(),
-			"search_timestamp": frappe.utils.now_datetime(), "searched_by": "Administrator",
-			"decision": "Clear",
-		}).insert()
-		self.addCleanup(frappe.delete_doc, "Conflict Review", review.name, force=True)
-		intake.status = "Under Review"
-		intake.save()
-		intake.status = "Approved"
-		intake.save()
-
-		customer = frappe.get_doc({
-			"doctype": "Customer", "customer_name": "PR Wall Customer", "customer_type": "Company",
-		}).insert(ignore_mandatory=True)
-		self.addCleanup(frappe.delete_doc, "Customer", customer.name, force=True)
-
 		requester = self._make_employee("PR Wall Requester 2")
-		approver = self._make_employee("PR Wall Approver 2")
+		approver = self._make_employee("PR Wall Approver 2", user_id=self._make_user("PR Wall Approver 2"))
 		self.addCleanup(frappe.delete_doc, "Employee", requester.name, force=True)
 		self.addCleanup(frappe.delete_doc, "Employee", approver.name, force=True)
-
-		practice_area = frappe.get_doc({"doctype": "Practice Area", "practice_area": "PR Wall Practice Area"}).insert()
-		self.addCleanup(frappe.delete_doc, "Practice Area", practice_area.name, force=True)
-		matter = frappe.get_doc({
-			"doctype": "Matter", "client": customer.name, "intake": intake.name, "status": "Open",
-			"open_date": frappe.utils.nowdate(), "practice_area": practice_area.name,
-			"transaction": "PR Wall Transaction", "responsible_solicitor": requester.name,
-			"is_restricted": 1,
-		}).insert()
-		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
+		matter = self._make_matter("PR Wall", is_restricted=1, responsible_solicitor=approver.name)
 
 		pr = frappe.get_doc({
 			"doctype": "Purchase Requisition",
@@ -448,13 +410,22 @@ class TestPurchaseRequisition(FrappeTestCase):
 		}).insert()
 		self.addCleanup(frappe.delete_doc, "Purchase Requisition", pr.name, force=True)
 
-		outsider = frappe.new_doc("User")
-		outsider.email = "pr-wall-outsider@example.com"
-		outsider.first_name = "PR Wall Outsider"
-		outsider.insert(ignore_permissions=True)
-		self.addCleanup(frappe.delete_doc, "User", outsider.name, force=True)
+		outsider = self._make_user("PR Wall Outsider")
+		self.assertFalse(frappe.has_permission("Purchase Requisition", doc=pr, ptype="read", user=outsider))
 
-		self.assertFalse(frappe.has_permission("Purchase Requisition", doc=pr, ptype="read", user=outsider.name))
+	def test_restricted_matter_requisition_rejects_an_approver_outside_the_wall(self):
+		requester = self._make_employee("PR Wall Requester 3")
+		approver = self._make_employee("PR Wall Approver 3", user_id=self._make_user("PR Wall Approver 3"))
+		self.addCleanup(frappe.delete_doc, "Employee", requester.name, force=True)
+		self.addCleanup(frappe.delete_doc, "Employee", approver.name, force=True)
+		matter = self._make_matter("PR Wall 3", is_restricted=1, responsible_solicitor=requester.name)
+
+		with self.assertRaises(frappe.ValidationError):
+			frappe.get_doc({
+				"doctype": "Purchase Requisition",
+				"employee": requester.name, "approver": approver.name, "matter": matter.name,
+				"items": [{"item_description": "Expert witness fee", "qty": 1, "estimated_rate": 500}],
+			}).insert()
 
 	def test_non_privileged_requester_through_approval_end_to_end(self):
 		requester_user = self._make_user("PR E2E Requester")
