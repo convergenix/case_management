@@ -280,3 +280,71 @@ class TestPurchaseRequisition(FrappeTestCase):
 		pr.rejection_reason = "Changed my mind."
 		with self.assertRaises(frappe.ValidationError):
 			pr.save()
+
+	def test_non_matter_requisition_has_no_ethical_wall_restriction(self):
+		requester = self._make_employee("PR Wall Requester 1")
+		approver = self._make_employee("PR Wall Approver 1")
+		self.addCleanup(frappe.delete_doc, "Employee", requester.name, force=True)
+		self.addCleanup(frappe.delete_doc, "Employee", approver.name, force=True)
+		pr = self._make_requisition(requester.name, approver.name)
+
+		self.assertTrue(frappe.has_permission("Purchase Requisition", doc=pr, ptype="read"))
+
+	def test_restricted_matter_requisition_is_hidden_from_an_outsider(self):
+		# Matter requires a real, Approved Intake (confirmed in test_matter_access.py's
+		# own _make_approved_intake) -- a bare Matter.insert() with no intake fails.
+		client = frappe.get_doc({
+			"doctype": "Legal Party", "party_name": "PR Wall Client", "party_type": "Organization",
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Legal Party", client.name, force=True)
+		intake = frappe.get_doc({
+			"doctype": "Intake", "proposed_client": client.name, "scope": "General advisory",
+			"parties": [{"legal_party": client.name, "role": "Proposed Client"}],
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Intake", intake.name, force=True)
+		review = frappe.get_doc({
+			"doctype": "Conflict Review", "intake": intake.name,
+			"party_set_hash": intake.get_party_set_hash(),
+			"search_timestamp": frappe.utils.now_datetime(), "searched_by": "Administrator",
+			"decision": "Clear",
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Conflict Review", review.name, force=True)
+		intake.status = "Under Review"
+		intake.save()
+		intake.status = "Approved"
+		intake.save()
+
+		customer = frappe.get_doc({
+			"doctype": "Customer", "customer_name": "PR Wall Customer", "customer_type": "Company",
+		}).insert(ignore_mandatory=True)
+		self.addCleanup(frappe.delete_doc, "Customer", customer.name, force=True)
+
+		requester = self._make_employee("PR Wall Requester 2")
+		approver = self._make_employee("PR Wall Approver 2")
+		self.addCleanup(frappe.delete_doc, "Employee", requester.name, force=True)
+		self.addCleanup(frappe.delete_doc, "Employee", approver.name, force=True)
+
+		practice_area = frappe.get_doc({"doctype": "Practice Area", "practice_area": "PR Wall Practice Area"}).insert()
+		self.addCleanup(frappe.delete_doc, "Practice Area", practice_area.name, force=True)
+		matter = frappe.get_doc({
+			"doctype": "Matter", "client": customer.name, "intake": intake.name, "status": "Open",
+			"open_date": frappe.utils.nowdate(), "practice_area": practice_area.name,
+			"transaction": "PR Wall Transaction", "responsible_solicitor": requester.name,
+			"is_restricted": 1,
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Matter", matter.name, force=True)
+
+		pr = frappe.get_doc({
+			"doctype": "Purchase Requisition",
+			"employee": requester.name, "approver": approver.name, "matter": matter.name,
+			"items": [{"item_description": "Expert witness fee", "qty": 1, "estimated_rate": 500}],
+		}).insert()
+		self.addCleanup(frappe.delete_doc, "Purchase Requisition", pr.name, force=True)
+
+		outsider = frappe.new_doc("User")
+		outsider.email = "pr-wall-outsider@example.com"
+		outsider.first_name = "PR Wall Outsider"
+		outsider.insert(ignore_permissions=True)
+		self.addCleanup(frappe.delete_doc, "User", outsider.name, force=True)
+
+		self.assertFalse(frappe.has_permission("Purchase Requisition", doc=pr, ptype="read", user=outsider.name))
