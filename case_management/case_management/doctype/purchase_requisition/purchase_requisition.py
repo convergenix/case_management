@@ -32,24 +32,28 @@ class PurchaseRequisition(Document):
 		# themselves as the requester; a privileged user may submit on
 		# someone else's behalf (e.g. an assistant entering a request for an
 		# executive).
-		if not self.employee:
+		if not self.employee or _is_privileged():
 			return
-		if PRIVILEGED_ROLES & set(frappe.get_roles(frappe.session.user)):
-			return
-		requester_user = frappe.db.get_value("Employee", self.employee, "user_id")
-		if frappe.session.user != requester_user:
+		if frappe.session.user != _user_of(self.employee):
 			frappe.throw(
 				"You can only create or save a Purchase Requisition naming yourself as the "
 				"Employee, unless you hold the Managing Partner or System Manager role."
 			)
 
 	def _validate_independence(self):
-		if self.employee and self.approver and self.employee == self.approver:
-			if not (PRIVILEGED_ROLES & set(frappe.get_roles(frappe.session.user))):
-				frappe.throw(
-					"The requester cannot also be the approver on the same requisition, "
-					"unless you hold the Managing Partner or System Manager role."
-				)
+		if not (self.employee and self.approver) or _is_privileged():
+			return
+		# One person can hold several Employee records sharing a user_id (e.g. a
+		# Left record plus a rehire), so distinct Link values prove nothing.
+		requester_user = _user_of(self.employee)
+		same_person = self.employee == self.approver or (
+			requester_user and requester_user == _user_of(self.approver)
+		)
+		if same_person:
+			frappe.throw(
+				"The requester cannot also be the approver on the same requisition, "
+				"unless you hold the Managing Partner or System Manager role."
+			)
 
 	def _validate_approval_transition(self):
 		previous_approval_status = "Pending" if self.is_new() else frappe.db.get_value(
@@ -74,18 +78,27 @@ class PurchaseRequisition(Document):
 				f"Cannot move Purchase Requisition from {previous_approval_status} to {self.approval_status}."
 			)
 
-		approver_user = frappe.db.get_value("Employee", self.approver, "user_id")
-		if frappe.session.user != approver_user:
-			if not (PRIVILEGED_ROLES & set(frappe.get_roles(frappe.session.user))):
+		if not _is_privileged():
+			if frappe.session.user != _user_of(self.approver):
 				frappe.throw(
 					"Only the named Approver (or a Managing Partner/System Manager) "
 					"can approve or reject this requisition."
 				)
+			if frappe.session.user == _user_of(self.employee):
+				frappe.throw("You cannot approve or reject your own Purchase Requisition.")
 
 		if self.approval_status == "Rejected" and not self.rejection_reason:
 			frappe.throw(
 				"Rejecting a Purchase Requisition requires a reason in 'Rejection Reason'."
 			)
+
+
+def _is_privileged():
+	return bool(PRIVILEGED_ROLES & set(frappe.get_roles(frappe.session.user)))
+
+
+def _user_of(employee):
+	return frappe.db.get_value("Employee", employee, "user_id") if employee else None
 
 
 def get_permission_query_conditions(user=None):

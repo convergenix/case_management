@@ -244,6 +244,52 @@ class TestPurchaseRequisition(FrappeTestCase):
 		finally:
 			frappe.set_user("Administrator")
 
+	def _make_user(self, label):
+		user = frappe.new_doc("User")
+		user.email = f"{frappe.scrub(label).replace('_', '-')}@example.com"
+		user.first_name = label
+		user.insert(ignore_permissions=True)
+		self.addCleanup(frappe.delete_doc, "User", user.name, force=True)
+		return user.name
+
+	def _make_rehired_employee_pair(self, label):
+		user = self._make_user(f"{label} User")
+		former = frappe.get_doc({
+			"doctype": "Employee", "first_name": f"{label} Former", "status": "Left",
+			"relieving_date": frappe.utils.nowdate(), "user_id": user, "create_user_permission": 0,
+		}).insert(ignore_mandatory=True)
+		self.addCleanup(frappe.delete_doc, "Employee", former.name, force=True)
+		current = frappe.get_doc({
+			"doctype": "Employee", "first_name": f"{label} Current", "status": "Active",
+			"user_id": user, "create_user_permission": 0,
+		}).insert(ignore_mandatory=True)
+		self.addCleanup(frappe.delete_doc, "Employee", current.name, force=True)
+		return user, current, former
+
+	def test_requester_cannot_name_their_own_aliased_employee_record_as_approver(self):
+		user, current, former = self._make_rehired_employee_pair("PR Alias Requester 1")
+
+		frappe.set_user(user)
+		try:
+			with self.assertRaises(frappe.ValidationError):
+				self._make_requisition(current.name, former.name)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_requester_cannot_approve_own_requisition_through_an_aliased_approver_record(self):
+		user, current, former = self._make_rehired_employee_pair("PR Alias Requester 2")
+		pr = self._make_requisition(current.name, former.name)
+		pr.submit()
+
+		pr.reload()
+		pr.approval_status = "Approved"
+		frappe.set_user(user)
+		try:
+			with self.assertRaises(frappe.ValidationError):
+				pr.save()
+		finally:
+			frappe.set_user("Administrator")
+
 	def test_rejecting_without_a_reason_is_blocked(self):
 		requester = self._make_employee("PR State Requester 5")
 		approver = self._make_employee("PR State Approver 5")
