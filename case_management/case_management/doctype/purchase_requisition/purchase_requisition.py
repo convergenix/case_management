@@ -21,6 +21,15 @@ class PurchaseRequisition(Document):
 		# never called on that path, so the approval gate has to live here.
 		self._validate_approval_transition()
 
+	def before_cancel(self):
+		if _is_privileged():
+			return
+		if frappe.session.user not in (_user_of(self.employee), _user_of(self.approver)):
+			frappe.throw(
+				"Only the requester, the named Approver, or a Managing Partner/System Manager "
+				"can cancel this requisition."
+			)
+
 	def _compute_amounts(self):
 		for row in self.items:
 			row.estimated_amount = flt(row.qty) * flt(row.estimated_rate)

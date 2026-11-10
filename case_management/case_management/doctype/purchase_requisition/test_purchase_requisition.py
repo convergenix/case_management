@@ -1,14 +1,25 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from contextlib import contextmanager
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
 
 class TestPurchaseRequisition(FrappeTestCase):
-	def _make_employee(self, label):
+	def _make_employee(self, label, user_id=None):
 		return frappe.get_doc({
 			"doctype": "Employee", "employee_name": label, "status": "Active",
+			"user_id": user_id, "create_user_permission": 0,
 		}).insert(ignore_mandatory=True)
+
+	@contextmanager
+	def _as_user(self, user):
+		frappe.set_user(user)
+		try:
+			yield
+		finally:
+			frappe.set_user("Administrator")
 
 	def _make_matter(self, label):
 		customer = frappe.get_doc({
@@ -422,3 +433,43 @@ class TestPurchaseRequisition(FrappeTestCase):
 		self.addCleanup(frappe.delete_doc, "User", outsider.name, force=True)
 
 		self.assertFalse(frappe.has_permission("Purchase Requisition", doc=pr, ptype="read", user=outsider.name))
+
+	def test_non_privileged_requester_through_approval_end_to_end(self):
+		requester_user = self._make_user("PR E2E Requester")
+		approver_user = self._make_user("PR E2E Approver")
+		bystander = self._make_user("PR E2E Bystander")
+		requester = self._make_employee("PR E2E Requester", user_id=requester_user)
+		approver = self._make_employee("PR E2E Approver", user_id=approver_user)
+		self.addCleanup(frappe.delete_doc, "Employee", requester.name, force=True)
+		self.addCleanup(frappe.delete_doc, "Employee", approver.name, force=True)
+
+		with self._as_user(requester_user):
+			pr = self._make_requisition(requester.name, approver.name)
+			pr.submit()
+
+		with self._as_user(bystander):
+			pr.reload()
+			pr.approval_status = "Approved"
+			with self.assertRaises(frappe.ValidationError):
+				pr.save()
+
+		with self._as_user(approver_user):
+			pr.reload()
+			pr.approval_status = "Approved"
+			pr.save()
+
+			pr.reload()
+			pr.approval_status = "Rejected"
+			pr.rejection_reason = "Second thoughts."
+			with self.assertRaises(frappe.ValidationError):
+				pr.save()
+
+		with self._as_user(bystander):
+			pr.reload()
+			with self.assertRaises(frappe.ValidationError):
+				pr.cancel()
+
+		self.assertEqual(
+			frappe.db.get_value("Purchase Requisition", pr.name, ["approval_status", "docstatus"]),
+			("Approved", 1),
+		)
