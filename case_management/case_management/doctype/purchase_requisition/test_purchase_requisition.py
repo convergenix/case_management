@@ -424,11 +424,28 @@ class TestPurchaseRequisition(FrappeTestCase):
 			}).insert()
 
 	def test_non_privileged_requester_through_approval_end_to_end(self):
+		# create_user_permission is deliberately left at Employee's real
+		# default (1): ERPNext auto-creates a User Permission restricting each
+		# employee's user to their own Employee (and Company) record, applied
+		# to every doctype. ignore_user_permissions on the employee/approver
+		# fields is what has to make this pass despite that. A company is
+		# required here because update_user_permissions() also adds a
+		# Company-scoped User Permission and throws if the employee has none.
+		real_company = frappe.db.get_value("Company", {}, "name")
 		requester_user = self._make_user("PR E2E Requester")
 		approver_user = self._make_user("PR E2E Approver")
 		bystander = self._make_user("PR E2E Bystander")
-		requester = self._make_employee("PR E2E Requester", user_id=requester_user)
-		approver = self._make_employee("PR E2E Approver", user_id=approver_user)
+		requester = self._make_employee(
+			"PR E2E Requester", user_id=requester_user, create_user_permission=1, company=real_company
+		)
+		approver = self._make_employee(
+			"PR E2E Approver", user_id=approver_user, create_user_permission=1, company=real_company
+		)
+		# Employee.on_trash() doesn't clean up the User Permissions it created,
+		# so do it ourselves rather than leak them past this test.
+		self.addCleanup(
+			frappe.db.delete, "User Permission", {"user": ["in", [requester_user, approver_user]]}
+		)
 		self.addCleanup(frappe.delete_doc, "Employee", requester.name, force=True)
 		self.addCleanup(frappe.delete_doc, "Employee", approver.name, force=True)
 

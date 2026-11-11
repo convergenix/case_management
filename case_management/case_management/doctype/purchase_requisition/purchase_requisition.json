@@ -23,6 +23,7 @@
   {
    "fieldname": "employee",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Employee",
    "options": "Employee",
    "reqd": 1
@@ -68,6 +69,7 @@
   {
    "fieldname": "approver",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Approver",
    "options": "Employee",
    "reqd": 1
@@ -115,7 +117,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-10 13:00:00.000000",
+ "modified": "2026-11-11 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Case Management",
  "name": "Purchase Requisition",
